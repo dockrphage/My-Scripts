@@ -1,4 +1,4 @@
-Excellent! You have a successful upgrade record. Let me provide you with **production-grade upgrade notes** tailored for your EC2 environment, incorporating DevOps interview perspectives (rollback strategies, health checks, and failure handling).
+**Production-grade upgrade notes** tailored for EC2 environment, incorporating DevOps interview perspectives (rollback strategies, health checks, and failure handling).
 
 # 📋 Kubernetes Upgrade Guide: v1.33 → v1.35.3 (EC2 Production Practice)
 
