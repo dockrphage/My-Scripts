@@ -19,7 +19,7 @@ Vagrant.configure("2") do |config|
 
   # ============================================================
   # LOAD BALANCER LAB CONFIGURATION
-  # For DevOps Interview Preparation
+ 
   # ============================================================
   
   nodes = {
