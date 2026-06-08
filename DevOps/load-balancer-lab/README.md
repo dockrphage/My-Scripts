@@ -1,4 +1,4 @@
-Here's your **updated Vagrantfile** transformed into a complete **HAProxy + Nginx load balancer lab** for DevOps interview preparation. I've replaced the Kubernetes setup with a lightweight, interview-friendly load balancing architecture.
+Lightweight **HAProxy + Nginx load balancer lab** architecture and implimentatin guide for DevOps interview preparation.
 
 ## 📁 Complete Project Structure
 
