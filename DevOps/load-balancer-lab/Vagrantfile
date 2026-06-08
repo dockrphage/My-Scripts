@@ -1,0 +1,109 @@
+Vagrant.configure("2") do |config|
+
+  # ============================================================
+  # LOAD BALANCER LAB CONFIGURATION
+  # For DevOps Interview Preparation
+  # ============================================================
+  
+  nodes = {
+    "haproxy" => { ip: "192.168.56.10", cpu: 1, mem: 512, role: "lb" },
+    "web1"    => { ip: "192.168.56.11", cpu: 1, mem: 512, role: "web" },
+    "web2"    => { ip: "192.168.56.12", cpu: 1, mem: 512, role: "web" }
+  }
+
+  nodes.each do |name, cfg|
+    config.vm.define name do |node|
+      node.vm.box = "ubuntu/jammy64"
+      node.vm.hostname = name
+
+      # Private network for internal communication
+      node.vm.network "private_network",
+        ip: cfg[:ip],
+        virtualbox__promiscuous_mode: "allow-all"
+
+      # ============================================================
+      # PROVISIONING SCRIPTS PER ROLE
+      # ============================================================
+      
+      # Load Balancer Node (HAProxy)
+      if cfg[:role] == "lb"
+        node.vm.provision "shell",
+          path: "provisioning/haproxy.sh",
+          args: [nodes["web1"][:ip], nodes["web2"][:ip]],
+          privileged: false
+      end
+      
+      # Web Server Nodes (Nginx)
+      if cfg[:role] == "web"
+        node.vm.provision "shell",
+          path: "provisioning/webserver.sh",
+          args: [name],
+          privileged: false
+      end
+
+      # ============================================================
+      # COMMON PROVISIONING FOR ALL NODES
+      # ============================================================
+      node.vm.provision "shell", inline: <<-SHELL
+        sudo apt-get update
+        sudo apt-get install -y \
+          apt-transport-https \
+          ca-certificates \
+          curl \
+          wget \
+          software-properties-common \
+          net-tools \
+          telnet \
+          dnsutils \
+          htop \
+          vim \
+          jq \
+          tree \
+          ncdu
+
+        # Enable password auth for convenience
+        sudo sed -i 's/PasswordAuthentication.*/PasswordAuthentication yes/' \
+          /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+        echo 'vagrant:vagrant' | sudo chpasswd
+        sudo systemctl restart ssh
+
+        # Install apache2-utils for load testing (ab command)
+        sudo apt-get install -y apache2-utils
+      SHELL
+
+      # ============================================================
+      # VIRTUALBOX PROVIDER SETTINGS
+      # ============================================================
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = cfg[:mem]
+        vb.cpus   = cfg[:cpu]
+        vb.name   = "lb-lab-#{name}"
+        
+        # Optimize for laptop performance
+        vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+        vb.customize ["modifyvm", :id, "--ioapic", "on"]
+      end
+
+      # Disable default synced folder for speed (optional)
+      node.vm.synced_folder ".", "/vagrant", disabled: false
+    end
+  end
+
+  # ============================================================
+  # OPTIONAL: STATUS OUTPUT AFTER VAGRANT UP
+  # ============================================================
+  config.vm.provision "shell",
+    inline: <<-SHELL,
+    echo "=========================================="
+    echo "LOAD BALANCER LAB IS READY!"
+    echo "=========================================="
+    echo "Access the load balancer at: http://192.168.56.10"
+    echo "HAProxy stats page: http://192.168.56.10:8080/stats"
+    echo ""
+    echo "Run load test: ab -n 1000 -c 10 http://192.168.56.10/"
+    echo ""
+    echo "Check logs: ssh into haproxy and run: tail -f /var/log/haproxy.log"
+    echo "=========================================="
+    SHELL
+    run: "always"
+end
