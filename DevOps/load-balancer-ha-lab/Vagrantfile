@@ -1,0 +1,143 @@
+Vagrant.configure("2") do |config|
+
+  VIP = "192.168.56.20"
+  VRRP_ID = 51
+  
+  nodes = {
+    "haproxy1" => { ip: "192.168.56.10", cpu: 1, mem: 512, role: "master", priority: 101 },
+    "haproxy2" => { ip: "192.168.56.11", cpu: 1, mem: 512, role: "backup", priority: 100 },
+    "web1"     => { ip: "192.168.56.30", cpu: 1, mem: 512, role: "web" },
+    "web2"     => { ip: "192.168.56.31", cpu: 1, mem: 512, role: "web" }
+  }
+
+  nodes.each do |name, cfg|
+    config.vm.define name do |node|
+      node.vm.box = "ubuntu/jammy64"
+      node.vm.hostname = name
+      node.vm.network "private_network", ip: cfg[:ip]
+
+      # Base provisioning for all nodes
+      node.vm.provision "shell", inline: <<-SHELL
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq curl wget net-tools
+      SHELL
+
+      # HAProxy nodes setup
+      if cfg[:role] == "master" || cfg[:role] == "backup"
+        node.vm.provision "shell", inline: <<-SHELL
+          echo "📦 Installing HAProxy and Keepalived on #{name}..."
+          sudo apt-get install -y -qq haproxy keepalived
+          
+          # Configure HAProxy
+          sudo tee /etc/haproxy/haproxy.cfg > /dev/null <<'EOF'
+global
+    log /dev/log local0
+    maxconn 4096
+    user haproxy
+    group haproxy
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    retries 3
+    timeout connect 5s
+    timeout client 50s
+    timeout server 50s
+
+frontend http_front
+    bind *:80
+    bind *:8080
+    default_backend http_back
+
+backend http_back
+    balance roundrobin
+    option httpchk GET /health
+    server web1 192.168.56.30:80 check inter 2s rise 2 fall 3
+    server web2 192.168.56.31:80 check inter 2s rise 2 fall 3
+
+listen stats
+    bind *:8080
+    stats enable
+    stats uri /stats
+    stats auth admin:admin
+EOF
+          
+          sudo systemctl enable haproxy
+          sudo systemctl restart haproxy
+          
+          # Configure Keepalived (CRITICAL: correct syntax)
+          sudo tee /etc/keepalived/keepalived.conf > /dev/null <<EOF
+vrrp_instance VI_1 {
+    state #{cfg[:role].upcase}
+    interface enp0s8
+    virtual_router_id $VRRP_ID
+    priority #{cfg[:priority]}
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass secret123
+    }
+    virtual_ipaddress {
+        $VIP/24
+    }
+}
+EOF
+          
+          sudo systemctl enable keepalived
+          sudo systemctl restart keepalived
+          
+          echo "✅ #{name} configured successfully"
+        SHELL
+      end
+
+      # Web servers setup
+      if cfg[:role] == "web"
+        node.vm.provision "shell", inline: <<-SHELL
+          echo "📦 Installing Nginx on #{name}..."
+          sudo apt-get install -y -qq nginx
+          
+          # Create web page
+          sudo tee /var/www/html/index.html > /dev/null <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Server #{name}</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .container { background: white; border-radius: 10px; padding: 30px; display: inline-block; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        h1 { color: #667eea; }
+        .badge { display: inline-block; padding: 5px 10px; background: #4CAF50; color: white; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 HA Load Balancer Demo</h1>
+        <h2>Web Server: #{name}</h2>
+        <p>IP Address: #{cfg[:ip]}</p>
+        <p><span class="badge">Backend Server</span></p>
+        <p>Request served at: <span id="time"></span></p>
+    </div>
+    <script>document.getElementById('time').innerHTML = new Date().toLocaleString();</script>
+</body>
+</html>
+EOF
+          
+          echo "OK" | sudo tee /var/www/html/health
+          
+          sudo systemctl enable nginx
+          sudo systemctl restart nginx
+          
+          echo "✅ #{name} configured successfully"
+        SHELL
+      end
+      
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = cfg[:mem]
+        vb.cpus = cfg[:cpu]
+        vb.name = "ha-lb-#{name}"
+      end
+    end
+  end
+end
