@@ -504,25 +504,5 @@ This lab demonstrates you understand:
 5. **Infrastructure as Code** (Full environment defined in Vagrantfile)
 6. **Observability** (Stats page and logs)
 
-## ⚡ Performance on Your 32GB Laptop
-
-This setup uses only:
-- **CPU:** 3 cores total (1 per VM)
-- **RAM:** ~1.5GB (3 × 512MB)
-- **Disk:** ~6GB (2GB per VM)
-- **Network:** Private virtual network with 1Gbps simulated speed
 
 You can easily add more web servers (web3, web4) by just editing the `nodes` hash!
-
-## 🎓 Advanced Interview Questions You Can Now Answer
-
-**Q: How would you make the load balancer itself highly available?**
-*A: Use Keepalived with VRRP to create a floating IP between two HAProxy instances.*
-
-**Q: How would you handle SSL termination?**
-*A: Add bind *:443 ssl crt /etc/ssl/certs/your-cert.pem to the frontend.*
-
-**Q: How would you log all requests to a central location?**
-*A: Configure HAProxy to send logs to a remote syslog server using `log 192.168.56.100 local0`.*
-
-This lab gives you hands-on experience that directly translates to answering real interview questions about load balancing, high availability, and infrastructure automation. Good luck with your DevOps interview! 🚀
