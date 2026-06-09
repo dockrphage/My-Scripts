@@ -1,4 +1,4 @@
-# Complete Zero-Downtime StatefulSet Implementation Upgrade Guide
+# Complete Zero-Downtime StatefulSet Upgrade Guide
 ## For DevOps Interview - With All Corrections Applied
 
 
