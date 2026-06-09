@@ -3,12 +3,12 @@
 
 
 
-Based on your successful deployment, here's the **complete, corrected implementation** starting from Phase 1.
+Based on previous successful deployment, here's the **complete, corrected implementation** starting from Phase 1.
 
 ---
 
 ## Phase 0: Infra setup
-I used the below script to setup my infra; any k8s/ k3s setup should work
+Note: I used the below script to setup my infra; any k8s/ k3s setup should work
 https://github.com/dockrphage/My-Scripts/tree/main/k8s/k8s-v1-36-Vag-auto
 
 ## Phase 1: Pre-requisites & Cluster Validation
@@ -545,4 +545,4 @@ kubectl delete namespace production
 
 ---
 
-**Your zero-downtime StatefulSet is now production-ready!** 🚀
+**Zero-downtime StatefulSet is now production-ready!** 🚀
