@@ -650,7 +650,7 @@ ab -n 10000 -c 100 http://192.168.56.20/
 
 ---
 
-# ✅ PART 4: YOUR DEMO CHECKLIST
+# ✅ PART 4: DEMO CHECKLIST
 
 ## For the Interview (Practice These)
 
