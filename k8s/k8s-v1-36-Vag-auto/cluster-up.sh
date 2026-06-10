@@ -37,4 +37,10 @@ vagrant ssh cp1 -c "sudo bash /home/vagrant/install-ingress-nginx.sh"
 echo "[10] Verifying ingress-nginx LoadBalancer..."
 vagrant ssh cp1 -c "kubectl get svc -n ingress-nginx ingress-nginx-controller -o wide"
 
+echo "[11] Installing storage and metrics..."
+vagrant ssh cp1 -c "sudo bash /vagrant/misc.sh"
+
+echo "[12] Installing devops autocompletion..."
+vagrant ssh cp1 -c "sudo bash /vagrant/install-devops-autocomplete.sh"
+
 echo "Cluster fully ready: Control plane, workers, MetalLB, ingress-nginx."
