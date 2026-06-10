@@ -1,0 +1,77 @@
+# Vagrantfile
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "gitlab-k3s"
+  
+  # Network - port forward GitLab web UI and SSH
+  config.vm.network "forwarded_port", guest: 80, host: 8080   # GitLab web
+  config.vm.network "forwarded_port", guest: 22, host: 2222   # GitLab SSH
+  
+  # Resources for single-node setup
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "4096"   # 4GB RAM minimum for GitLab
+    vb.cpus = 2
+    vb.name = "gitlab-k3s"
+  end
+  
+  # Install K3s and GitLab
+  config.vm.provision "shell", inline: <<-SHELL
+    set -e
+    echo "=== Installing K3s ==="
+    curl -sfL https://get.k3s.io | sh -
+    
+    echo "=== Waiting for K3s to be ready ==="
+    while ! kubectl get nodes 2>/dev/null | grep -q Ready; do
+      sleep 2
+    done
+    
+    # Install Helm
+    echo "=== Installing Helm ==="
+    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    chmod 700 get_helm.sh
+    ./get_helm.sh
+    
+    echo "=== Adding GitLab Helm Repository ==="
+    helm repo add gitlab https://charts.gitlab.io/
+    helm repo update
+    
+    # Create namespace
+    kubectl create namespace gitlab
+    
+    echo "=== Installing GitLab (this will take 5-10 minutes) ==="
+    helm install gitlab gitlab/gitlab \
+      --namespace gitlab \
+      --set global.hosts.host=localhost \
+      --set global.hosts.https=false \
+      --set certmanager.install=false \
+      --set nginx-ingress.enabled=false \
+      --set global.ingress.configureCertmanager=false \
+      --set gitlab.webservice.service.type=NodePort \
+      --set gitlab.webservice.service.nodePort=30080 \
+      --set gitlab.ssh.service.type=NodePort \
+      --set gitlab.ssh.service.nodePort=30022 \
+      --set postgresql.enabled=true \
+      --set redis.enabled=true \
+      --set minio.enabled=false \
+      --set gitlab.webservice.resources.requests.memory=500Mi \
+      --set gitlab.webservice.resources.requests.cpu=200m \
+      --set gitlab.sidekiq.resources.requests.memory=300Mi \
+      --set gitlab.sidekiq.resources.requests.cpu=100m \
+      --set postgresql.resources.requests.memory=250Mi \
+      --set redis.resources.requests.memory=100Mi \
+      --timeout 15m
+    
+    echo "=== Installation complete ==="
+    echo ""
+    echo "=========================================="
+    echo "GitLab is being deployed. Check status with:"
+    echo "  kubectl get pods -n gitlab"
+    echo ""
+    echo "Access GitLab at: http://localhost:8080"
+    echo ""
+    echo "Initial root password:"
+    kubectl get secret gitlab-gitlab-initial-root-password -n gitlab -o jsonpath="{.data.password}" 2>/dev/null | base64 -d || echo "Password not ready yet - check in 2 minutes"
+    echo ""
+    echo "=========================================="
+  SHELL
+end
