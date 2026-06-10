@@ -1,0 +1,94 @@
+# Vagrantfile
+Vagrant.configure("2") do |config|
+
+  nodes = {
+    "cp1"   => { ip: "192.168.56.10", bridged_ip: "192.168.1.50", cpu: 2, mem: 4096, role: "control-plane" },
+    "node1" => { ip: "192.168.56.11", bridged_ip: "192.168.1.51", cpu: 2, mem: 6144, role: "worker" },
+    "node2" => { ip: "192.168.56.12", bridged_ip: "192.168.1.52", cpu: 2, mem: 6144, role: "worker" },
+    "secrets"=> { ip: "192.168.56.13", bridged_ip: "192.168.1.53", cpu: 4, mem: 6144, role: "vault" }
+  }
+
+  nodes.each do |name, cfg|
+    config.vm.define name do |node|
+      node.vm.box = "ubuntu/jammy64"
+      node.vm.hostname = name
+
+      # Host-only network
+      node.vm.network "private_network",
+        ip: cfg[:ip],
+        virtualbox__promiscuous_mode: "allow-all"
+
+      # Bridged network
+      node.vm.network "public_network",
+        ip: cfg[:bridged_ip],
+        bridge: "wlp0s20f3"
+
+      # ----------------------------------------------------
+      # SCRIPT ASSIGNMENT PER NODE
+      # ----------------------------------------------------
+
+      # cp1 → control-plane script only
+      if name == "cp1"
+        node.vm.provision "file",
+          source: "k8s-CP-setup.sh",
+          destination: "/home/vagrant/k8s-CP-setup.sh"
+
+        node.vm.provision "file",
+          source: "install-metallb.sh",
+          destination: "/home/vagrant/install-metallb.sh"
+
+        node.vm.provision "file",
+          source: "install-ingress-nginx.sh",
+          destination: "/home/vagrant/install-ingress-nginx.sh"
+      end
+
+      # node1 + node2 → worker + docker scripts
+      if ["node1", "node2"].include?(name)
+        node.vm.provision "file",
+          source: "k8s-worker-setup.sh",
+          destination: "/home/vagrant/k8s-worker-setup.sh"
+
+        node.vm.provision "file",
+          source: "install-docker.sh",
+          destination: "/home/vagrant/install-docker.sh"
+      end
+
+      # secrets node → Vault installation scripts
+      if name == "secrets"
+        node.vm.provision "file",
+          source: "install-vault.sh",
+          destination: "/home/vagrant/install-vault.sh"
+
+        node.vm.provision "file",
+          source: "configure-vault.sh",
+          destination: "/home/vagrant/configure-vault.sh"
+      end
+
+      # ----------------------------------------------------
+      # COMMON PROVISIONING FOR ALL NODES
+      # ----------------------------------------------------
+      node.vm.provision "shell", inline: <<-SHELL
+        sudo apt-get update
+        sudo apt-get install -y apt-transport-https ca-certificates curl \
+        software-properties-common gnupg2 jq vim net-tools telnet \
+        dnsutils tree htop ncdu git wget
+
+        sudo sed -i 's/PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/60-cloudimg-settings.conf
+        echo 'vagrant:ss' | sudo chpasswd
+        sudo systemctl restart ssh
+
+        # Only chmod if scripts exist
+        if ls /home/vagrant/*.sh 1> /dev/null 2>&1; then
+          sudo chmod +x /home/vagrant/*.sh
+        fi
+      SHELL
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = cfg[:mem]
+        vb.cpus   = cfg[:cpu]
+      end
+
+      node.vm.synced_folder ".", "/vagrant", disabled: false
+    end
+  end
+end
