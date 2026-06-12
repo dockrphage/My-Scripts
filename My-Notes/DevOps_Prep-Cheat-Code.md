@@ -2,7 +2,7 @@
 
 # **🧠 DevOps Interview Prep Cheat Code **  
 *(High‑retention, systems‑thinking, architecture‑recall )*
-*(idea adapted from: [Capril Arora ](https://www.youtube.com/watch?v=Ui7mqPbktFI) )*
+*(ideas adapted from: [Capril Arora ](https://www.youtube.com/watch?v=Ui7mqPbktFI) )*
 
 ---
 
@@ -157,6 +157,5 @@ This keeps your systems knowledge **interview‑ready**.
 
 Master this cycle = **You will not forget architecture, workflows, or debugging patterns.**
 
-Courtsey: [Capril Arora | TheUPSCCoach](https://www.youtube.com/watch?v=Ui7mqPbktFI)
 ---
 
