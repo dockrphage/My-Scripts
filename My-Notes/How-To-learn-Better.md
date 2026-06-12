@@ -156,6 +156,6 @@ This keeps your systems knowledge **interview‑ready**.
 
 Master this cycle = **You will not forget architecture, workflows, or debugging patterns.**
 
-Courtsey: [Capril Arora | TheUPSCCoach] (https://www.youtube.com/watch?v=Ui7mqPbktFI)
+Courtsey: [Capril Arora | TheUPSCCoach](https://www.youtube.com/watch?v=Ui7mqPbktFI)
 ---
 
