@@ -1,7 +1,8 @@
 
 
-# **🧠 TECH MEMORY CHEAT SHEET (For Senior DevOps Interviews)**  
-*(High‑retention, systems‑thinking, architecture‑recall edition)*
+# **🧠 DevOps Interview Prep Cheat Code **  
+*(High‑retention, systems‑thinking, architecture‑recall )*
+*(idea adapted from: [Capril Arora ](https://www.youtube.com/watch?v=Ui7mqPbktFI) )*
 
 ---
 
