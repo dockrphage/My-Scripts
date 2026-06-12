@@ -1,0 +1,21 @@
+architecture: standalone
+
+auth:
+  enabled: true
+  password: gitlab-redis-password
+
+master:
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+
+  nodeSelector:
+    kubernetes.io/role: infra
+
+persistence:
+  size: 10Gi
+

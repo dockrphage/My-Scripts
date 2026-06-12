@@ -1,0 +1,20 @@
+auth:
+  username: gitlab
+  password: gitlab-password
+  database: gitlabhq_production
+
+primary:
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "3Gi"
+
+  nodeSelector:
+    kubernetes.io/role: infra
+
+persistence:
+  size: 50Gi
+

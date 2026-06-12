@@ -1,0 +1,97 @@
+global:
+  edition: ce
+
+  hosts:
+    domain: example.com
+    https: false
+
+  ingress:
+    configureCertmanager: false
+
+  psql:
+    host: gitlab-pg-postgresql.infra.svc.cluster.local
+    port: 5432
+    database: gitlabhq_production
+    username: gitlab
+    password:
+      secret: gitlab-postgresql-password
+      key: postgres-password
+
+  redis:
+    host: gitlab-redis-master.infra.svc.cluster.local
+    port: 6379
+    password:
+      enabled: true
+      secret: gitlab-redis-password
+      key: password
+
+  appConfig:
+    object_store:
+      enabled: true
+      connection:
+        secret: gitlab-object-storage
+        key: config
+
+    artifacts:
+      object_store:
+        enabled: true
+
+    lfs:
+      object_store:
+        enabled: true
+
+    uploads:
+      object_store:
+        enabled: true
+
+    packages:
+      object_store:
+        enabled: true
+
+    backups:
+      object_store:
+        enabled: true
+
+    registry:
+      bucket: gitlab-registry
+
+  registry:
+    httpSecret:
+      secret: gitlab-registry-httpsecret
+      key: httpSecret
+
+registry:
+  enabled: true
+  storage:
+    secret: gitlab-object-storage
+    key: config
+
+gitlab:
+  gitaly:
+    persistence:
+      size: 10Gi
+
+  sidekiq:
+    replicas: 1
+
+  webservice:
+    replicas: 1
+
+  toolbox:
+    backups:
+      objectStorage:
+        config:
+          secret: gitlab-object-storage
+          key: config
+
+certmanager-issuer:
+  enabled: false
+  email: "none@example.com"
+
+gitlab-runner:
+  runners:
+    privileged: true
+    builds:
+      privileged: true
+    services:
+      privileged: true

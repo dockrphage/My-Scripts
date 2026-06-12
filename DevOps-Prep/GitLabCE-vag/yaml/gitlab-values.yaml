@@ -1,0 +1,10 @@
+global:
+  psql:
+    host: gitlab-pg-postgresql.infra.svc.cluster.local
+    port: 5432
+    database: gitlabhq_production
+    username: gitlab
+    password:
+      secret: gitlab-postgresql-password
+      key: postgres-password
+
