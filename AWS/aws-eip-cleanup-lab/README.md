@@ -3,7 +3,7 @@
 Idea & Inspiration from: Harish Shetty https://www.youtube.com/watch?v=E8RXpknD4cA
 
 ### 🎯 **Project Objective**
-Build a production-grade AWS cost optimization solution on your laptop using LocalStack (zero AWS costs) for DevOps learning and interview preparation.
+Build a production-grade AWS cost optimization solution (Detect and delete unused / stale Elastic IPs (EIPs)) on on-premise (laptop) using LocalStack (zero AWS costs) for DevOps learning and interview preparation. For detailed premise, please refer Harish's video.
 
 ---
 
