@@ -24,7 +24,7 @@ Build a production-grade AWS cost optimization solution on your laptop using Loc
 ## Phase 0: Prerequisites & Environment Setup {#phase-0}
 
 ### **0.1 System Requirements**
-- **Hardware**: Dell Precision 3540 or similar (8GB+ RAM, 20GB+ free disk)
+- **Hardware**: Laptop (8GB+ RAM, 20GB+ free disk)
 - **OS**: Ubuntu 20.04+ / macOS / Windows with WSL2
 - **Software**: Docker Desktop, Python 3.9+, Git
 
