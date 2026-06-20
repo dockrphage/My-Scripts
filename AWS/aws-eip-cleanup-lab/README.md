@@ -1,6 +1,6 @@
 # 📚 Complete Progressive Implementation Guide
 ## AWS EIP Cleanup - On-Premise Learning Lab
-Idea, Inspiration & refactored from: https://www.youtube.com/watch?v=E8RXpknD4cA
+Idea & Inspiration from: Harish Shetty https://www.youtube.com/watch?v=E8RXpknD4cA
 
 ### 🎯 **Project Objective**
 Build a production-grade AWS cost optimization solution on your laptop using LocalStack (zero AWS costs) for DevOps learning and interview preparation.
