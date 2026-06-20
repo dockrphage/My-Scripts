@@ -1,4 +1,4 @@
-# 📚 Complete Progressive Implementation Guide
+# 📚 Complete Implementation Guide
 ## AWS EIP Cleanup - On-Premise Learning Lab
 Idea & Inspiration from: Harish Shetty https://www.youtube.com/watch?v=E8RXpknD4cA
 
