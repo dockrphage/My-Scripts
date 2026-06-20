@@ -237,7 +237,7 @@ EOF
 
 ```bash
 # Start services
-export LOCALSTACK_AUTH_TOKEN=ls-PogA5430-KUZe-SUZE-pETi-6631jOCac93e
+export LOCALSTACK_AUTH_TOKEN=*************************
 docker-compose up -d
 
 # Wait for initialization

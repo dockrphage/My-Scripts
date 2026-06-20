@@ -96,7 +96,7 @@ EOF
 
 ```bash
 # Get token from: https://app.localstack.cloud → Settings → Auth Tokens
-export LOCALSTACK_AUTH_TOKEN="ls-PogA5430-KUZe-SUZE-pETi-6631jOCac93e"
+export LOCALSTACK_AUTH_TOKEN="**********dfdfdf*********"
 
 # Verify token is set
 echo $LOCALSTACK_AUTH_TOKEN
@@ -520,7 +520,7 @@ docker-compose up -d
 # ============================================
 
 # 1. Start everything
-export LOCALSTACK_AUTH_TOKEN="ls-PogA5430-KUZe-SUZE-pETi-6631jOCac93e"
+export LOCALSTACK_AUTH_TOKEN="************************************"
 docker-compose up -d && sleep 15
 
 # 2. Check status
