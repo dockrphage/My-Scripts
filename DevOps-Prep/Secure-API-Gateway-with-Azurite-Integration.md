@@ -2,7 +2,7 @@ Turning a simple "API Gateway" into a powerful demonstration of advanced enginee
 
 ### 🏗️ Architecture Overview
 
-We are building a **secure, observable, and resilient API Gateway** that processes and stores data locally. The architecture leverages four key components:
+Building a **secure, observable, and resilient API Gateway** that processes and stores data locally. The architecture leverages four key components:
 
 *   **API Layer**: A FastAPI application acting as the Gateway. It will handle authentication, request validation, and business logic.
 *   **Middleware Stack**: A series of middleware components for logging (with sensitive data masking), rate limiting, and request tracking.
