@@ -1,7 +1,6 @@
 
 # My Scripts Collection
 
-My Scripts Collection
 A curated collection of practical, production‑ready scripts for Cloud, DevOps, Kubernetes, Linux, and general automation workflows.
 
 This repository follows a README‑first philosophy:
