@@ -35,7 +35,7 @@ This comprehensive guide walks us through building a complete auto-remediation s
 
 Ensure to have these installed:
 - **Docker** (running)
-- **Kind** - `brew install kind` or from [releases](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+- **Kind** - `brew install kind` or from [releases](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) or [official](https://kind.sigs.k8s.io/docs/user/quick-start/)
 - **kubectl** - `brew install kubectl`
 - **Helm** - `brew install helm`
 - **Go 1.21+** - for building the operator
