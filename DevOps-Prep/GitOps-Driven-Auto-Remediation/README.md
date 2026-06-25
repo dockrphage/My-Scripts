@@ -189,6 +189,35 @@ Access the UI at `https://localhost:8080` (accept the self-signed certificate). 
 
 This is the core of the lab—a Kubernetes operator that watches Crossplane resource status and triggers automatic remediation when failures are detected .
 
+## ✅ Install Kubebuilder on Ubuntu (official method)
+
+The official Kubebuilder quick‑start guide provides the installation steps.  
+You can install the latest release with:
+
+```
+curl -L -o kubebuilder "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)"
+chmod +x kubebuilder
+sudo mv kubebuilder /usr/local/bin/
+```
+
+  [kubebuilder.io](https://kubebuilder.io/quick-start)
+
+This puts the `kubebuilder` binary in your PATH so the command works everywhere.
+
+---
+
+## 🧪 Verify installation
+
+```
+kubebuilder version
+```
+
+You should see output similar to:
+
+```
+Version: version.Version{KubeBuilderVersion:"vX.Y.Z", ...}
+```
+
 ### 4.1 Scaffold the Operator
 
 ```bash
