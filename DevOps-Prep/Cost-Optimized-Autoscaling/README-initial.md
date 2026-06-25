@@ -1,11 +1,13 @@
-# Progressive Implementation Plan: Cost-Optimized Autoscaling & CI/CD
+# Implementation Plan: Cost-Optimized Autoscaling & CI/CD
 
+
+## Re-architected Solution for Full K8s Cluster
 
 ### Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         Your Ubuntu Laptop (Host)                          │
+│                         Ubuntu Laptop (Host)                          │
 │                                                                             │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
 │  │                    CI/CD Pipeline (Dockerized)                       │   │
@@ -1031,4 +1033,68 @@ rabbitmq:
   password: guest
 
 ingress:
+  enabled: true  hosts:
+  - host: app.cost-optimized.local
+    paths:
+    - path: /
+      pathType: Prefix
+  - host: rabbitmq.cost-optimized.local
+    paths:
+    - path: /
+      pathType: Prefix
+
+costOptimization:
   enabled: true
+  maxMonthlyCost: 0.50
+  scaleToZero: true
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  metrics:
+    enabled: true
+```
+
+---
+
+## Quick Start Guide
+
+```bash
+# 1. Verify cluster
+./verify-cluster.sh
+
+# 2. Install core components
+./install-core.sh
+
+# 3. Deploy RabbitMQ
+kubectl apply -f rabbitmq-statefulset.yaml
+
+# 4. Build and deploy app
+./pipeline.sh
+
+# 5. Test scaling
+./load-test.sh 60 20
+
+# 6. Monitor
+./setup-monitoring.sh
+```
+
+---
+
+## Summary
+
+| Component | IP/URL | Purpose |
+|-----------|--------|---------|
+| Registry | 192.168.1.60:5000 | Local Docker registry |
+| RabbitMQ | 192.168.1.61:5672 | Message queue |
+| App | 192.168.1.62 | Sample application |
+| Kubecost | Port forward to 9090 | Cost monitoring |
+| KEDA | KEDA namespace | Autoscaling |
+
+**Key Benefits:**
+- Real multi-node cluster with load balancing
+- Scale-to-zero for cost savings
+- Integrated cost monitoring and validation
+- Production-grade ingress and networking
+- Multi-arch builds with security scanning
