@@ -1,4 +1,4 @@
-# GitOps-Driven Auto-Remediation - Complete Implementation Guide
+# GitOps-Driven Auto-Remediation - Implementation Guide
 
 This comprehensive guide walks us through building a complete auto-remediation system where Crossplane provisions infrastructure, ArgoCD enables GitOps, and Chaos Mesh injects failures to validate our remediation logic—all on local laptop with zero cloud costs.
 
