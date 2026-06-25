@@ -1,219 +1,219 @@
 # Progressive Implementation Plan: Cost-Optimized Autoscaling & CI/CD
 
 
-## Phase 0: Host Environment Setup (Day 1)
+### Architecture Overview
 
-### 0.1 Verify Existing Tools
-```bash
-#!/bin/bash
-# verify-tools.sh - Check what's already installed
-
-echo "=== Checking Existing Tools ==="
-
-# Docker
-if command -v docker &> /dev/null; then
-    echo "✅ Docker: $(docker --version)"
-    docker info | grep "Server Version"
-else
-    echo "❌ Docker not found - Install with: sudo apt install docker.io"
-fi
-
-# Minikube
-if command -v minikube &> /dev/null; then
-    echo "✅ Minikube: $(minikube version)"
-else
-    echo "❌ Minikube not found - Install with: curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
-fi
-
-# Kubectl
-if command -v kubectl &> /dev/null; then
-    echo "✅ Kubectl: $(kubectl version --client)"
-else
-    echo "❌ Kubectl not found - Install with: sudo apt install kubectl"
-fi
-
-# Helm
-if command -v helm &> /dev/null; then
-    echo "✅ Helm: $(helm version)"
-else
-    echo "❌ Helm not found - Install with: curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash"
-fi
-
-# Buildx
-if docker buildx version &> /dev/null; then
-    echo "✅ Buildx: $(docker buildx version)"
-else
-    echo "❌ Buildx not found - Create with: docker buildx create --name multiarch-builder"
-fi
-
-# Additional tools
-for tool in hey trivy jq bc; do
-    if command -v $tool &> /dev/null; then
-        echo "✅ $tool: $(which $tool)"
-    else
-        echo "❌ $tool not found"
-    fi
-done
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Your Ubuntu Laptop (Host)                          │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                    CI/CD Pipeline (Dockerized)                       │   │
+│  │  • Build multi-arch images (buildx)                                  │   │
+│  │  • Security scanning (Trivy)                                         │   │
+│  │  • Cost estimation & validation                                       │   │
+│  │  • Helm deployment                                                    │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                    Load Testing (hey/wrk)                            │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Kubernetes Cluster (3 Nodes)                            │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        Ingress (192.168.1.55)                       │   │
+│  │                  Routes: app.cost-optimized.local                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                     │
+│  │    cp1       │  │    node1     │  │    node2     │                     │
+│  │ 192.168.56.10│  │ 192.168.56.11│  │ 192.168.56.12│                     │
+│  │              │  │              │  │              │                     │
+│  │ ┌──────────┐ │  │ ┌──────────┐ │  │ ┌──────────┐ │                     │
+│  │ │ Kubecost │ │  │ │ RabbitMQ │ │  │ │  App     │ │                     │
+│  │ │ Metrics  │ │  │ │ (Stateful│ │  │ │  Pods    │ │                     │
+│  │ │ Server   │ │  │ │  Set)    │ │  │ │          │ │                     │
+│  │ └──────────┘ │  │ └──────────┘ │  │ └──────────┘ │                     │
+│  │              │  │              │  │              │                     │
+│  │ ┌──────────┐ │  │ ┌──────────┐ │  │ ┌──────────┐ │                     │
+│  │ │ KEDA     │ │  │ │ Registry │ │  │ │  App     │ │                     │
+│  │ │ Operator │ │  │ │ (Local)  │ │  │ │  Pods    │ │                     │
+│  │ └──────────┘ │  │ └──────────┘ │  │ └──────────┘ │                     │
+│  └──────────────┘  └──────────────┘  └──────────────┘                     │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        MetalLB (192.168.1.55-65)                    │   │
+│  │                  LoadBalancer services                              │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 0.2 Install Missing Tools (Ubuntu)
+---
+
+## Phase 1: Base Infrastructure Setup
+
+### 1.1 Verify Cluster & MetalLB
 ```bash
 #!/bin/bash
-# install-missing-tools.sh
+# verify-cluster.sh
 
-echo "Installing missing tools for Ubuntu..."
+echo "=== Verifying Cluster ==="
 
-# Update system
-sudo apt update
+# Check nodes
+kubectl get nodes -o wide
 
-# Install core tools
-sudo apt install -y \
-    docker.io \
-    docker-buildx \
-    kubectl \
-    jq \
-    bc \
-    curl \
-    wget \
-    git \
-    make
+# Check MetalLB
+kubectl get pods -n metallb-system
+kubectl get ipaddresspools -n metallb-system
+kubectl get l2advertisements -n metallb-system
 
-# Install Docker Compose plugin
-sudo apt install -y docker-compose-plugin
+# Check Ingress
+kubectl get pods -n ingress-nginx
 
-# Start Docker service
-sudo systemctl enable docker
-sudo systemctl start docker
-sudo usermod -aG docker $USER
+# Set context
+kubectl config set-context --current --namespace=cost-optimized
+kubectl create namespace cost-optimized --dry-run=client -o yaml | kubectl apply -f -
 
-# Install Minikube
-curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-sudo install minikube-linux-amd64 /usr/local/bin/minikube
-
-# Install Helm
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-chmod 700 get_helm.sh
-./get_helm.sh
-
-# Install Trivy
-sudo apt install -y trivy || {
-    wget https://github.com/aquasecurity/trivy/releases/download/v0.45.0/trivy_0.45.0_Linux-64bit.deb
-    sudo dpkg -i trivy_0.45.0_Linux-64bit.deb
-}
-
-# Install hey (load testing tool)
-go install github.com/rakyll/hey@latest || {
-    # Alternative: use apache bench
-    sudo apt install -y apache2-utils
-    # Create alias for hey using ab
-    echo 'alias hey="ab"' >> ~/.bashrc
-}
-
-echo "Installation complete! Please log out and back in for group changes to take effect."
+echo "✅ Cluster ready!"
 ```
 
-### 0.3 Docker Configuration for Local Registry
+### 1.2 Install Core Components
 ```bash
 #!/bin/bash
-# configure-docker.sh
+# install-core.sh
 
-# Configure Docker daemon for insecure registry
+set -e
+NAMESPACE="cost-optimized"
+REGISTRY_IP="192.168.1.60"  # Using MetalLB range
+
+echo "=== Installing Core Components ==="
+
+# 1. Install KEDA
+echo "Installing KEDA..."
+kubectl apply -f https://github.com/kedacore/keda/releases/download/v2.10.0/keda-2.10.0.yaml
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keda-operator -n keda-system --timeout=120s
+
+# 2. Install Kubecost
+echo "Installing Kubecost..."
+helm repo add kubecost https://kubecost.github.io/cost-analyzer/
+helm repo update
+helm upgrade --install kubecost kubecost/cost-analyzer \
+    --namespace kubecost --create-namespace \
+    --set global.prometheus.enabled=true \
+    --set prometheus.server.persistentVolume.enabled=true \
+    --set prometheus.server.persistentVolume.size=10Gi \
+    --set kubecostProductConfigs.productConfigs.defaultStorageClass="local-path"
+
+# 3. Install Local Registry with LoadBalancer
+echo "Installing Local Registry..."
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-registry
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-registry
+  template:
+    metadata:
+      labels:
+        app: local-registry
+    spec:
+      containers:
+      - name: registry
+        image: registry:2
+        ports:
+        - containerPort: 5000
+        env:
+        - name: REGISTRY_HTTP_ADDR
+          value: ":5000"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-registry
+  namespace: kube-system
+spec:
+  type: LoadBalancer
+  loadBalancerIP: ${REGISTRY_IP}
+  ports:
+  - port: 5000
+    targetPort: 5000
+  selector:
+    app: local-registry
+EOF
+
+# Wait for registry
+kubectl wait --for=condition=ready pod -l app=local-registry -n kube-system --timeout=60s
+
+# 4. Configure Docker on host for registry
+echo "Configuring host Docker..."
 sudo mkdir -p /etc/docker
-
-# Create daemon.json for local registry
 sudo tee /etc/docker/daemon.json > /dev/null <<EOF
 {
-  "insecure-registries": ["localhost:5000", "host.minikube.internal:5000"],
+  "insecure-registries": ["${REGISTRY_IP}:5000", "localhost:5000"],
   "experimental": true,
   "features": {
     "buildkit": true
   }
 }
 EOF
-
-# Restart Docker
 sudo systemctl restart docker
 
-echo "Docker configured for local registry"
-```
-
-### 0.4 Minikube Setup (Host-Native)
-```bash
-#!/bin/bash
-# setup-minikube.sh
-
-# Start Minikube with host resources
-# Using host networking for better performance
-minikube start \
-    --driver=docker \
-    --cpus=4 \
-    --memory=8192 \
-    --disk-size=20g \
-    --addons=ingress \
-    --addons=registry \
-    --kubernetes-version=v1.28.0
-
-# Enable metrics server for HPA
-minikube addons enable metrics-server
-
-# Configure kubectl to use minikube context
-kubectl config use-context minikube
-
-# Verify cluster
-kubectl cluster-info
-kubectl get nodes
-
-# Set up port forwarding for local registry
-kubectl port-forward -n kube-system service/registry 5000:80 &
-
-echo "Minikube started successfully"
-echo "Dashboard: minikube dashboard"
+echo "✅ Core components installed!"
+echo "Registry: ${REGISTRY_IP}:5000"
+echo "Kubecost: kubectl port-forward -n kubecost service/kubecost-cost-analyzer 9090:9090"
 ```
 
 ---
 
-## Phase 1: Core Infrastructure (Day 2-3)
+## Phase 2: Application & Messaging
 
-### 1.1 Host-Native Registry Access
-```bash
-#!/bin/bash
-# local-registry.sh
-
-# Use host's local registry (mapped to minikube)
-REGISTRY_PORT=$(kubectl get service -n kube-system registry -o jsonpath='{.spec.ports[0].nodePort}')
-echo "Registry available at: localhost:${REGISTRY_PORT}"
-
-# For buildx, we need to use the host's registry address
-export DOCKER_REGISTRY="localhost:${REGISTRY_PORT}"
-
-# Or use Docker's internal registry
-docker run -d -p 5000:5000 --name local-registry registry:2
-export DOCKER_REGISTRY="localhost:5000"
-
-echo "Local registry running on port 5000"
-```
-
-### 1.2 Simplified RabbitMQ Deployment (Host Access)
+### 2.1 Deploy RabbitMQ (StatefulSet with persistence)
 ```yaml
-# rabbitmq-deployment.yaml
+# rabbitmq-statefulset.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: rabbitmq-config
-  namespace: default
+  namespace: cost-optimized
 data:
   rabbitmq.conf: |
     default_user = guest
     default_pass = guest
-    # Enable management plugin
+    default_vhost = /
     management.tcp.port = 15672
+  enabled_plugins: |
+    [rabbitmq_management, rabbitmq_prometheus].
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-secret
+  namespace: cost-optimized
+type: Opaque
+stringData:
+  rabbitmq-password: guest
+  rabbitmq-erlang-cookie: "secret-cookie-12345"
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: rabbitmq
-  namespace: default
+  namespace: cost-optimized
 spec:
+  serviceName: rabbitmq-headless
   replicas: 1
   selector:
     matchLabels:
@@ -225,50 +225,69 @@ spec:
     spec:
       containers:
       - name: rabbitmq
-        image: rabbitmq:3.12-management
+        image: rabbitmq:3.12-management-alpine
         ports:
         - containerPort: 5672
           name: amqp
         - containerPort: 15672
           name: management
+        - containerPort: 15692
+          name: prometheus
         env:
         - name: RABBITMQ_DEFAULT_USER
           value: guest
         - name: RABBITMQ_DEFAULT_PASS
-          value: guest
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: rabbitmq-password
+        - name: RABBITMQ_ERLANG_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: rabbitmq-secret
+              key: rabbitmq-erlang-cookie
         resources:
           requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
             memory: "512Mi"
             cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: rabbitmq-data
+          mountPath: /var/lib/rabbitmq
+        - name: rabbitmq-config
+          mountPath: /etc/rabbitmq/conf.d/
+        livenessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "check_port_connectivity"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "check_port_connectivity"]
+          initialDelaySeconds: 20
+          periodSeconds: 10
+      volumes:
+      - name: rabbitmq-config
+        configMap:
+          name: rabbitmq-config
+  volumeClaimTemplates:
+  - metadata:
+      name: rabbitmq-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq
-  namespace: default
-spec:
-  selector:
-    app: rabbitmq
-  ports:
-  - name: amqp
-    port: 5672
-    targetPort: 5672
-    nodePort: 30000
-  - name: management
-    port: 15672
-    targetPort: 15672
-    nodePort: 30001
-  type: NodePort
----
-# Expose to host
-apiVersion: v1
-kind: Service
-metadata:
-  name: rabbitmq-external
-  namespace: default
+  namespace: cost-optimized
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: "192.168.1.61"
 spec:
   type: LoadBalancer
   selector:
@@ -280,84 +299,198 @@ spec:
   - name: management
     port: 15672
     targetPort: 15672
-```
-
-### 1.3 Access from Host
-```bash
-#!/bin/bash
-# rabbitmq-host-access.sh
-
-# Get NodePorts
-AMQP_PORT=$(kubectl get service rabbitmq -o jsonpath='{.spec.ports[?(@.name=="amqp")].nodePort}')
-MGMT_PORT=$(kubectl get service rabbitmq -o jsonpath='{.spec.ports[?(@.name=="management")].nodePort}')
-
-# Get Minikube IP
-MINIKUBE_IP=$(minikube ip)
-
-echo "RabbitMQ Access:"
-echo "AMQP: ${MINIKUBE_IP}:${AMQP_PORT}"
-echo "Management UI: http://${MINIKUBE_IP}:${MGMT_PORT}"
-echo "Credentials: guest/guest"
-
-# Or use port-forwarding for localhost access
-kubectl port-forward service/rabbitmq 5672:5672 &
-kubectl port-forward service/rabbitmq 15672:15672 &
-```
-
-### 1.4 Kubecost Installation (Host Access)
-```bash
-#!/bin/bash
-# install-kubecost.sh
-
-# Install Kubecost with minimal resources
-helm repo add kubecost https://kubecost.github.io/cost-analyzer/
-helm repo update
-
-helm upgrade --install kubecost kubecost/cost-analyzer \
-  --namespace kubecost --create-namespace \
-  --set global.prometheus.enabled=false \
-  --set prometheus.server.persistentVolume.enabled=false \
-  --set prometheus.server.storageSize=5Gi \
-  --set kubecostModel.etlEnabled=false \
-  --set kubecostModel.etlBucketConfigSecret=""
-
-# Access Kubecost from host
-kubectl port-forward -n kubecost service/kubecost-cost-analyzer 9090:9090 &
-
-echo "Kubecost available at: http://localhost:9090"
-```
-
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-headless
+  namespace: cost-optimized
+spec:
+  clusterIP: None
+  selector:
+    app: rabbitmq
+  ports:
+  - name: amqp
+    port: 5672
+```
 
-## Phase 2: Application Development (Day 3-4)
+### 2.2 Deploy Application
+```yaml
+# app-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-app
+  namespace: cost-optimized
+  labels:
+    app: sample-app
+    version: v1
+spec:
+  replicas: 0  # Start at zero, KEDA will scale
+  selector:
+    matchLabels:
+      app: sample-app
+  template:
+    metadata:
+      labels:
+        app: sample-app
+        version: v1
+    spec:
+      containers:
+      - name: app
+        image: 192.168.1.60:5000/sample-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: RABBITMQ_HOST
+          value: rabbitmq.cost-optimized.svc.cluster.local
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: QUEUE_NAME
+          value: work-queue
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-app
+  namespace: cost-optimized
+spec:
+  selector:
+    app: sample-app
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-app-external
+  namespace: cost-optimized
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: "192.168.1.62"
+spec:
+  type: LoadBalancer
+  selector:
+    app: sample-app
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+```
 
-### 2.1 Application with Host-Accessible Features
+### 2.3 Ingress Configuration
+```yaml
+# ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sample-app-ingress
+  namespace: cost-optimized
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: app.cost-optimized.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sample-app
+            port:
+              number: 8080
+  - host: rabbitmq.cost-optimized.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rabbitmq
+            port:
+              number: 15672
+```
+
+### 2.4 Application Code (Enhanced)
 ```python
-# app.py - Enhanced with host connectivity
+# app.py - Enhanced with metrics
 import os
 import pika
 import json
 import time
 import logging
+import socket
 from flask import Flask, request, jsonify
 from threading import Thread
-import socket
+from prometheus_client import Counter, Gauge, generate_latest, REGISTRY
+import sys
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# Use environment variables for flexibility
-RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq.default.svc.cluster.local')
+# Metrics
+messages_processed = Counter('app_messages_processed_total', 'Total messages processed')
+messages_failed = Counter('app_messages_failed_total', 'Total failed messages')
+queue_depth = Gauge('app_queue_depth', 'Current queue depth')
+active_pods = Gauge('app_active_pods', 'Number of active pods')
+
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq.cost-optimized.svc.cluster.local')
 RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT', 5672))
 QUEUE_NAME = os.getenv('QUEUE_NAME', 'work-queue')
 POD_NAME = os.getenv('POD_NAME', socket.gethostname())
 
+# Set active pods metric
+active_pods.set(1)
+
 def process_message(ch, method, properties, body):
     """Process message from queue"""
-    logging.info(f"Pod {POD_NAME} processing: {body}")
-    # Simulate varying work
-    time.sleep(0.05 + (hash(body) % 5) / 100.0)
-    ch.basic_ack(delivery_tag=method.delivery_tag)
+    try:
+        logging.info(f"Pod {POD_NAME} processing: {body[:50]}...")
+        # Simulate work with variable delay
+        delay = 0.05 + (hash(body) % 10) / 100.0
+        time.sleep(delay)
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        messages_processed.inc()
+        logging.info(f"✓ Message processed in {delay:.3f}s")
+    except Exception as e:
+        logging.error(f"✗ Failed to process: {e}")
+        messages_failed.inc()
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 def start_consumer():
     """Start consuming messages with retry logic"""
@@ -375,50 +508,72 @@ def start_consumer():
             )
             channel = connection.channel()
             channel.queue_declare(queue=QUEUE_NAME, durable=True)
-            channel.basic_qos(prefetch_count=1)
+            channel.basic_qos(prefetch_count=5)
             channel.basic_consume(
                 queue=QUEUE_NAME,
                 on_message_callback=process_message
             )
             retry_count = 0
-            logging.info("Consumer started successfully")
+            logging.info(f"✓ Consumer started on {POD_NAME}")
             channel.start_consuming()
         except Exception as e:
             retry_count += 1
-            logging.error(f"Consumer error (attempt {retry_count}): {e}")
+            logging.error(f"✗ Consumer error (attempt {retry_count}): {e}")
             time.sleep(min(30, retry_count * 2))
 
 @app.route('/')
-def health():
+def root():
     return jsonify({
-        "status": "healthy",
+        "service": "sample-app",
+        "version": "v1",
         "pod": POD_NAME,
-        "queue": QUEUE_NAME,
-        "rabbitmq": f"{RABBITMQ_HOST}:{RABBITMQ_PORT}"
+        "status": "healthy"
     }), 200
+
+@app.route('/health')
+def health():
+    return jsonify({"status": "healthy", "pod": POD_NAME}), 200
+
+@app.route('/metrics')
+def metrics():
+    return generate_latest(REGISTRY), 200
 
 @app.route('/enqueue', methods=['POST'])
 def enqueue():
     """Add message to queue"""
     try:
         data = request.json or {}
+        
+        # Validate
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
         connection = pika.BlockingConnection(
             pika.ConnectionParameters(host=RABBITMQ_HOST, port=RABBITMQ_PORT)
         )
         channel = connection.channel()
         channel.queue_declare(queue=QUEUE_NAME, durable=True)
+        
+        # Add metadata
+        message = {
+            "data": data,
+            "timestamp": time.time(),
+            "pod": POD_NAME
+        }
+        
         channel.basic_publish(
             exchange='',
             routing_key=QUEUE_NAME,
-            body=json.dumps({
-                "data": data,
-                "timestamp": time.time(),
-                "pod": POD_NAME
-            })
+            body=json.dumps(message),
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # Make message persistent
+                content_type='application/json'
+            )
         )
         connection.close()
-        return jsonify({"status": "queued"}), 202
+        return jsonify({"status": "queued", "pod": POD_NAME}), 202
     except Exception as e:
+        logging.error(f"Enqueue error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/queue/status')
@@ -430,42 +585,190 @@ def queue_status():
         )
         channel = connection.channel()
         queue = channel.queue_declare(queue=QUEUE_NAME, durable=True, passive=True)
+        messages = queue.method.message_count
+        queue_depth.set(messages)
         connection.close()
         return jsonify({
             "name": QUEUE_NAME,
-            "messages": queue.method.message_count
+            "messages": messages,
+            "pod": POD_NAME
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/queue/flush', methods=['POST'])
+def flush_queue():
+    """Flush all messages (for testing)"""
+    try:
+        connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host=RABBITMQ_HOST, port=RABBITMQ_PORT)
+        )
+        channel = connection.channel()
+        count = 0
+        while True:
+            method_frame, header, body = channel.basic_get(queue=QUEUE_NAME, auto_ack=True)
+            if not method_frame:
+                break
+            count += 1
+        connection.close()
+        return jsonify({"flushed": count}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
-    # Start consumer in background thread
-    consumer_thread = Thread(target=start_consumer)
-    consumer_thread.daemon = True
+    # Start consumer in background
+    consumer_thread = Thread(target=start_consumer, daemon=True)
     consumer_thread.start()
     
     # Start web server
-    app.run(host='0.0.0.0', port=8080)
+    logging.info(f"Starting web server on {POD_NAME}")
+    app.run(host='0.0.0.0', port=8080, threaded=True)
 ```
 
-### 2.2 Build Script with Host Registry
+---
+
+## Phase 3: KEDA Autoscaling Configuration
+
+### 3.1 ScaledObject with Advanced Metrics
+```yaml
+# scaledobject.yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: sample-app-scaler
+  namespace: cost-optimized
+  annotations:
+    kubecost.keda/optimized: "true"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sample-app
+  
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  
+  # Advanced scaling policies
+  pollingInterval: 5
+  cooldownPeriod: 20
+  
+  triggers:
+  # Primary: RabbitMQ queue depth
+  - type: rabbitmq
+    metadata:
+      queueName: work-queue
+      host: rabbitmq.cost-optimized.svc.cluster.local
+      port: "5672"
+      queueLength: "5"
+      protocol: amqp
+      enableTLS: "false"
+  
+  # Secondary: CPU utilization
+  - type: cpu
+    metadata:
+      type: Utilization
+      value: "70"
+  
+  # Fallback: Prometheus metrics
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-server.kubecost.svc.cluster.local:80
+      metricName: rabbitmq_queue_messages_ready
+      threshold: "5"
+      query: |
+        rabbitmq_queue_messages_ready{
+          queue="work-queue",
+          namespace="cost-optimized"
+        }
+
+  scalingStrategy:
+    strategy: default
+    customScalingStrategy:
+      - type: group
+        metadata:
+          target: "1.5"  # Scale factor
+
+  # Advanced scaling behavior
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 60
+          policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 30
+          - type: Pods
+            value: 1
+            periodSeconds: 60
+          selectPolicy: Min
+        scaleUp:
+          stabilizationWindowSeconds: 10
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 2
+            periodSeconds: 15
+          selectPolicy: Max
+```
+
+---
+
+## Phase 4: CI/CD Pipeline with Cost Optimization
+
+### 4.1 Full Pipeline Script
 ```bash
 #!/bin/bash
-# build-push.sh
+# pipeline.sh - Full CI/CD with cost optimization
 
 set -e
 
+# Configuration
 APP_NAME="sample-app"
-REGISTRY="${DOCKER_REGISTRY:-localhost:5000}"
-IMAGE_TAG="${REGISTRY}/${APP_NAME}:${1:-latest}"
+NAMESPACE="cost-optimized"
+REGISTRY_IP="192.168.1.60"
+REGISTRY="${REGISTRY_IP}:5000"
+IMAGE_TAG="${REGISTRY}/${APP_NAME}:${BUILD_NUMBER:-latest}"
+COST_THRESHOLD=0.50  # $0.50 per month
 
-echo "Building multi-arch image: ${IMAGE_TAG}"
+echo "=== 🚀 CI/CD Pipeline ==="
+echo "Build: ${BUILD_NUMBER:-latest}"
+echo "Registry: ${REGISTRY}"
 
-# Create builder if not exists
-docker buildx create --name multiarch-builder --use 2>/dev/null || docker buildx use multiarch-builder
+# Step 1: Lint & Test
+echo "Step 1: Linting and Testing..."
+shellcheck app.py 2>/dev/null || echo "ShellCheck not installed, skipping"
+
+# Step 2: Security Scan (Dockerfile)
+echo "Step 2: Scanning Dockerfile..."
+cat > Dockerfile <<'EOF'
+FROM python:3.9-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir flask pika prometheus_client
+
+COPY app.py .
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+USER 1000:1000
+
+CMD ["python", "app.py"]
+EOF
+
+trivy config Dockerfile --severity HIGH,CRITICAL
+
+# Step 3: Build Multi-arch Image
+echo "Step 3: Building Multi-arch Image..."
+docker buildx create --name multiarch --use 2>/dev/null || docker buildx use multiarch
 docker buildx inspect --bootstrap
 
-# Build and push
 docker buildx build \
     --platform linux/amd64,linux/arm64 \
     --tag ${IMAGE_TAG} \
@@ -474,71 +777,45 @@ docker buildx build \
     --cache-to type=registry,ref=${REGISTRY}/${APP_NAME}:cache,mode=max \
     .
 
-# Verify
-docker buildx imagetools inspect ${IMAGE_TAG}
-
-echo "Image built and pushed: ${IMAGE_TAG}"
-```
-
----
-
-## Phase 3: Complete CI/CD Pipeline (Day 5-6)
-
-### 3.1 Host-Native Pipeline
-```bash
-#!/bin/bash
-# pipeline.sh - Host-native CI/CD
-
-set -e
-
-# Configuration
-APP_NAME="sample-app"
-REGISTRY="${DOCKER_REGISTRY:-localhost:5000}"
-IMAGE_TAG="${REGISTRY}/${APP_NAME}:${BUILD_NUMBER:-latest}"
-NAMESPACE="default"
-COST_THRESHOLD=0.50  # $0.50 per month
-
-echo "=== Starting Host-Native CI/CD Pipeline ==="
-echo "Build: ${BUILD_NUMBER:-latest}"
-echo "Registry: ${REGISTRY}"
-
-# Step 1: Security Scan (before build)
-echo "Step 1: Scanning Dockerfile..."
-trivy config Dockerfile --severity HIGH,CRITICAL
-
-# Step 2: Build Multi-arch Image
-echo "Step 2: Building Multi-arch Image..."
-./build-push.sh ${BUILD_NUMBER:-latest}
-
-# Step 3: Security Scan (after build)
-echo "Step 3: Scanning Built Image..."
+# Step 4: Security Scan (Image)
+echo "Step 4: Scanning Image..."
 trivy image ${IMAGE_TAG} \
     --severity HIGH,CRITICAL \
     --exit-code 1 \
-    --ignore-unfixed
+    --ignore-unfixed \
+    --vuln-type os,library
 
-# Step 4: Deploy with Helm
-echo "Step 4: Deploying Application..."
+# Step 5: Helm Template Validation
+echo "Step 5: Validating Helm Charts..."
+helm template ${APP_NAME} ./helm-chart \
+    --set image.repository=${REGISTRY}/${APP_NAME} \
+    --set image.tag=${BUILD_NUMBER:-latest} \
+    --namespace ${NAMESPACE} \
+    --debug --dry-run
+
+# Step 6: Deploy
+echo "Step 6: Deploying..."
 helm upgrade --install ${APP_NAME} ./helm-chart \
     --set image.repository=${REGISTRY}/${APP_NAME} \
     --set image.tag=${BUILD_NUMBER:-latest} \
     --set image.pullPolicy=Always \
     --namespace ${NAMESPACE} \
-    --wait
+    --wait \
+    --timeout 5m
 
-# Step 5: Cost Estimation
-echo "Step 5: Estimating Costs..."
+# Step 7: Cost Estimation
+echo "Step 7: Estimating Costs..."
 
-# Get resource requests from deployment
+# Get resource requests
 CPU_REQUEST=$(kubectl get deployment ${APP_NAME} -n ${NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].resources.requests.cpu}')
 MEM_REQUEST=$(kubectl get deployment ${APP_NAME} -n ${NAMESPACE} -o jsonpath='{.spec.template.spec.containers[0].resources.requests.memory}')
-CURRENT_REPLICAS=$(kubectl get deployment ${APP_NAME} -n ${NAMESPACE} -o jsonpath='{.status.replicas}')
+REPLICAS=$(kubectl get deployment ${APP_NAME} -n ${NAMESPACE} -o jsonpath='{.status.replicas}')
 
 # Convert to standard units
 CPU_CORES=$(echo ${CPU_REQUEST} | sed 's/m//' | awk '{print $1/1000}')
 MEM_GB=$(echo ${MEM_REQUEST} | sed 's/Mi//' | awk '{print $1/1024}')
 
-# Calculate monthly cost
+# Cloud pricing (example - adjust for your cloud)
 CPU_PRICE_PER_CORE_HOUR=0.04
 MEM_PRICE_PER_GB_HOUR=0.004
 HOURS_PER_MONTH=730
@@ -546,16 +823,17 @@ HOURS_PER_MONTH=730
 CPU_COST=$(echo "scale=4; ${CPU_CORES} * ${CPU_PRICE_PER_CORE_HOUR} * ${HOURS_PER_MONTH}" | bc)
 MEM_COST=$(echo "scale=4; ${MEM_GB} * ${MEM_PRICE_PER_GB_HOUR} * ${HOURS_PER_MONTH}" | bc)
 POD_COST=$(echo "scale=4; ${CPU_COST} + ${MEM_COST}" | bc)
-MONTHLY_COST=$(echo "scale=4; ${POD_COST} * ${CURRENT_REPLICAS}" | bc)
+MONTHLY_COST=$(echo "scale=4; ${POD_COST} * ${REPLICAS:-0}" | bc)
 
-echo "CPU Cost: $${CPU_COST}/month"
-echo "Memory Cost: $${MEM_COST}/month"
-echo "Pod Cost: $${POD_COST}/month"
-echo "Monthly Cost: $${MONTHLY_COST}"
+echo "Resource Costs:"
+echo "  CPU: $${CPU_COST}/month"
+echo "  Memory: $${MEM_COST}/month"
+echo "  Per Pod: $${POD_COST}/month"
+echo "  Total: $${MONTHLY_COST}/month"
 
-# Step 6: Cost Validation
+# Step 8: Cost Validation
 if (( $(echo "${MONTHLY_COST} > ${COST_THRESHOLD}" | bc -l) )); then
-    echo "❌ FAILED: Estimated cost $${MONTHLY_COST} exceeds threshold $${COST_THRESHOLD}"
+    echo "❌ FAILED: Estimated cost $${MONTHLY_COST} > threshold $${COST_THRESHOLD}"
     echo "Rolling back..."
     helm rollback ${APP_NAME} -n ${NAMESPACE}
     exit 1
@@ -563,230 +841,171 @@ else
     echo "✅ Cost check passed: $${MONTHLY_COST} <= $${COST_THRESHOLD}"
 fi
 
-# Step 7: Validate Scaling
-echo "Step 7: Validating Scaling Configuration..."
+# Step 9: Verify Scaling
+echo "Step 8: Verifying Autoscaling..."
 kubectl get scaledobject ${APP_NAME}-scaler -n ${NAMESPACE} 2>/dev/null || {
-    echo "⚠️  ScaledObject not found, applying..."
+    echo "Applying KEDA ScaledObject..."
     kubectl apply -f scaledobject.yaml
 }
 
-echo "=== Pipeline Completed Successfully ==="
-```
+# Step 10: Wait for ready
+echo "Step 9: Waiting for deployment to be ready..."
+kubectl wait --for=condition=ready pod -l app=${APP_NAME} -n ${NAMESPACE} --timeout=60s || echo "No pods running (scaled to zero)"
 
-### 3.2 KEDA ScaledObject with Host Access
-```yaml
-# scaledobject.yaml
-apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
-metadata:
-  name: sample-app-scaler
-  namespace: default
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: sample-app
-  minReplicaCount: 0
-  maxReplicaCount: 10
-  pollingInterval: 5
-  cooldownPeriod: 20
-  triggers:
-  - type: rabbitmq
-    metadata:
-      queueName: work-queue
-      host: rabbitmq.default.svc.cluster.local
-      port: "5672"
-      queueLength: "5"
-      protocol: amqp
-      enableTLS: "false"
+echo "✅ Pipeline completed successfully!"
+echo ""
+echo "Application URL: http://192.168.1.62"
+echo "RabbitMQ UI: http://192.168.1.61:15672 (guest/guest)"
+echo "Kubecost: kubectl port-forward -n kubecost service/kubecost-cost-analyzer 9090:9090"
 ```
 
 ---
 
-## Phase 4: Testing & Verification (Day 6-7)
+## Phase 5: Load Testing
 
-### 4.1 Host-Native Load Testing
+### 5.1 Load Test Script
 ```bash
 #!/bin/bash
 # load-test.sh
 
 set -e
 
-NAMESPACE="default"
-APP_SERVICE="sample-app"
-QUEUE_NAME="work-queue"
+APP_URL="http://192.168.1.62"
+NAMESPACE="cost-optimized"
+DURATION=${1:-60}
+RATE=${2:-20}
 
-echo "=== Starting Load Test ==="
+echo "=== 🚀 Load Test ==="
+echo "Duration: ${DURATION}s"
+echo "Rate: ${RATE} req/sec"
+echo "Target: ${APP_URL}"
 
-# Get service endpoints
-MINIKUBE_IP=$(minikube ip)
-APP_PORT=$(kubectl get service ${APP_SERVICE} -n ${NAMESPACE} -o jsonpath='{.spec.ports[0].nodePort}')
-RABBITMQ_PORT=$(kubectl get service rabbitmq -n ${NAMESPACE} -o jsonpath='{.spec.ports[?(@.name=="amqp")].nodePort}')
-
-if [ -z "$APP_PORT" ]; then
-    echo "Using port-forwarding for application..."
-    kubectl port-forward service/${APP_SERVICE} 8080:8080 &
-    APP_URL="http://localhost:8080"
-else
-    APP_URL="http://${MINIKUBE_IP}:${APP_PORT}"
-fi
-
-echo "Application URL: ${APP_URL}"
-
-# Function to watch scaling
-watch_scaling() {
-    echo "Watching scaling behavior (press Ctrl+C to stop)..."
+# Function to monitor scaling
+monitor_scaling() {
+    echo "📊 Monitoring scaling..."
     while true; do
-        replicas=$(kubectl get deployment ${APP_SERVICE} -n ${NAMESPACE} -o jsonpath='{.status.replicas}')
-        ready=$(kubectl get deployment ${APP_SERVICE} -n ${NAMESPACE} -o jsonpath='{.status.readyReplicas}')
-        echo "$(date '+%H:%M:%S') - Replicas: ${replicas:-0} (Ready: ${ready:-0})"
+        replicas=$(kubectl get deployment sample-app -n ${NAMESPACE} -o jsonpath='{.status.replicas}' 2>/dev/null || echo "0")
+        ready=$(kubectl get deployment sample-app -n ${NAMESPACE} -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
         
-        # Check queue depth
-        if command -v rabbitmqadmin &> /dev/null; then
-            queue_depth=$(rabbitmqadmin -H ${MINIKUBE_IP} -P ${RABBITMQ_PORT} -u guest -p guest list queues name messages_ready | grep ${QUEUE_NAME} | awk '{print $2}')
-            echo "  Queue depth: ${queue_depth:-0}"
-        fi
+        # Get queue depth
+        queue_depth=$(kubectl exec -n ${NAMESPACE} deployment/rabbitmq -- \
+            rabbitmqctl list_queues name messages_ready 2>/dev/null | \
+            grep work-queue | awk '{print $2}' || echo "0")
         
-        sleep 3
+        echo "$(date '+%H:%M:%S') | Pods: ${replicas:-0} (Ready: ${ready:-0}) | Queue: ${queue_depth:-0}"
+        sleep 2
     done
 }
 
-# Generate load with hey
-generate_load() {
-    local duration=$1
-    local rate=$2
-    
-    echo "Generating ${duration}s load at ${rate} req/sec..."
-    
-    # Use hey if available, fallback to curl loop
-    if command -v hey &> /dev/null; then
-        hey -n $((duration * rate)) -c 20 -q ${rate} \
-            -H "Content-Type: application/json" \
-            -d '{"task": "process", "timestamp": "'$(date +%s)'"}' \
-            ${APP_URL}/enqueue
-    else
-        # Fallback: use parallel curl
-        for i in $(seq 1 $((duration * rate / 10))); do
-            for j in $(seq 1 10); do
-                curl -s -X POST ${APP_URL}/enqueue \
-                    -H "Content-Type: application/json" \
-                    -d '{"task": "process", "batch": "'$i'"}'
-            done &
-            sleep 0.1
+# Phase 1: Generate load
+echo "📤 Generating load..."
+(
+    for i in $(seq 1 $((DURATION * RATE / 10))); do
+        for j in $(seq 1 10); do
+            curl -s -X POST ${APP_URL}/enqueue \
+                -H "Content-Type: application/json" \
+                -d "{\"task\": \"load-test-${i}\", \"batch\": ${j}}" \
+                > /dev/null 2>&1
         done
-        wait
-    fi
-}
+        echo -n "."
+        sleep 0.1
+    done
+    echo " Done!"
+) &
 
-# Start monitoring in background
-watch_scaling &
-WATCH_PID=$!
+# Phase 2: Monitor scaling
+monitor_scaling &
+MONITOR_PID=$!
 
-# Run load test
-echo -e "\n=== Load Test Phase ==="
-generate_load 60 20
+# Wait for load to finish
+wait
 
-# Wait for scaling to settle
-echo -e "\n=== Waiting for scaling to stabilize ==="
-sleep 30
+# Phase 3: Check results
+echo -e "\n📈 Test Results:"
 
-# Check final status
-echo -e "\n=== Final Status ==="
-kubectl get pods -n ${NAMESPACE} | grep ${APP_SERVICE}
-kubectl get scaledobject ${APP_SERVICE}-scaler -n ${NAMESPACE}
+# Get max pods reached
+MAX_PODS=$(kubectl get deployment sample-app -n ${NAMESPACE} -o jsonpath='{.status.replicas}' 2>/dev/null || echo "0")
+echo "Maximum pods reached: ${MAX_PODS}"
 
-# Wait for scale-down
-echo -e "\n=== Waiting for scale-down (cooldown period) ==="
+# Check queue status
+QUEUE_STATUS=$(curl -s ${APP_URL}/queue/status 2>/dev/null || echo '{"messages":0}')
+MESSAGES=$(echo $QUEUE_STATUS | jq -r '.messages // 0')
+echo "Remaining queue messages: ${MESSAGES}"
+
+# Phase 4: Wait for scale-down
+echo -e "\n⏳ Waiting for scale-down (cooldown period)..."
 sleep 45
 
-final_replicas=$(kubectl get deployment ${APP_SERVICE} -n ${NAMESPACE} -o jsonpath='{.status.replicas}')
-echo "Final replicas after cooldown: ${final_replicas:-0}"
+FINAL_PODS=$(kubectl get deployment sample-app -n ${NAMESPACE} -o jsonpath='{.status.replicas}' 2>/dev/null || echo "0")
+echo "Final pods after cooldown: ${FINAL_PODS}"
 
-# Kill monitoring
-kill $WATCH_PID 2>/dev/null
+if [ "${FINAL_PODS}" -eq 0 ]; then
+    echo "✅ Scale-to-zero successful!"
+else
+    echo "⚠️  Scale-to-zero not complete (${FINAL_PODS} pods remaining)"
+fi
 
-echo "=== Load Test Complete ==="
-```
+# Stop monitoring
+kill $MONITOR_PID 2>/dev/null
 
-### 4.2 Monitoring Dashboard (Host Access)
-```bash
-#!/bin/bash
-# monitoring.sh
-
-echo "=== Starting Monitoring Services ==="
-
-# Port forward all services to localhost
-echo "Setting up port forwarding..."
-
-# Kubecost
-kubectl port-forward -n kubecost service/kubecost-cost-analyzer 9090:9090 &
-echo "Kubecost: http://localhost:9090"
-
-# RabbitMQ Management
-kubectl port-forward service/rabbitmq 15672:15672 &
-echo "RabbitMQ Management: http://localhost:15672 (guest/guest)"
-
-# Application
-kubectl port-forward service/sample-app 8080:8080 &
-echo "Application: http://localhost:8080"
-
-# KEDA metrics
-kubectl port-forward -n keda-system service/keda-operator-metrics 8082:8082 &
-echo "KEDA Metrics: http://localhost:8082"
-
-echo -e "\nAll services available on localhost"
-echo "Press Ctrl+C to stop all port-forwarding"
-
-# Wait for user input
-read -p "Press Enter to stop monitoring..."
-pkill -f "kubectl port-forward"
-echo "Monitoring stopped"
+echo -e "\n✅ Load test complete!"
 ```
 
 ---
 
-## Phase 5: Cleanup & Production Readiness (Day 7-8)
+## Phase 6: Monitoring Dashboard
 
-### 5.1 Cleanup Script
+### 6.1 Setup Monitoring
 ```bash
 #!/bin/bash
-# cleanup.sh
+# setup-monitoring.sh
 
-echo "=== Cleaning up ==="
+echo "=== 📊 Setting up Monitoring ==="
 
-# Uninstall Helm releases
-helm uninstall sample-app -n default 2>/dev/null || echo "No Helm release found"
+# 1. Port forward Kubecost
+kubectl port-forward -n kubecost service/kubecost-cost-analyzer 9090:9090 &
+echo "Kubecost: http://localhost:9090"
 
-# Delete KEDA ScaledObject
-kubectl delete scaledobject sample-app-scaler -n default 2>/dev/null || echo "No ScaledObject found"
+# 2. Port forward RabbitMQ
+kubectl port-forward -n cost-optimized service/rabbitmq 15672:15672 &
+echo "RabbitMQ UI: http://localhost:15672 (guest/guest)"
 
-# Delete RabbitMQ
-kubectl delete -f rabbitmq-deployment.yaml 2>/dev/null || echo "RabbitMQ deployment not found"
+# 3. Port forward Prometheus (if available)
+kubectl port-forward -n kubecost service/kubecost-prometheus-server 9091:80 &
+echo "Prometheus: http://localhost:9091"
 
-# Delete Kubecost
-helm uninstall kubecost -n kubecost 2>/dev/null || echo "Kubecost not installed"
+# 4. Port forward Grafana (if available)
+kubectl port-forward -n kubecost service/kubecost-grafana 3000:80 &
+echo "Grafana: http://localhost:3000"
 
-# Stop port forwarding
-pkill -f "kubectl port-forward" 2>/dev/null || echo "No port-forwarding processes"
+echo ""
+echo "📊 Monitoring URLs:"
+echo "  Kubecost: http://localhost:9090"
+echo "  RabbitMQ: http://localhost:15672"
+echo "  Prometheus: http://localhost:9091"
+echo "  Grafana: http://localhost:3000 (admin/admin)"
 
-# Optional: Stop Minikube
-# minikube stop
-
-# Optional: Delete local registry
-# docker stop local-registry 2>/dev/null || echo "Registry not running"
-
-echo "Cleanup complete!"
+# 5. Show cost metrics
+echo ""
+echo "💰 Cost Metrics (last 5 minutes):"
+curl -s "http://localhost:9090/api/costData?window=5m&aggregation=namespace" | \
+    jq -r '.data[0].namespace | to_entries[] | "\(.key): $\(.value.totalCost)"' 2>/dev/null || \
+    echo "Waiting for Kubecost data..."
 ```
 
-### 5.2 Production Values
+---
+
+## Phase 7: Production-Ready Manifest
+
+### 7.1 Complete Helm Chart
 ```yaml
-# production-values.yaml
+# helm-chart/values.yaml
 image:
-  repository: localhost:5000/sample-app
+  repository: 192.168.1.60:5000/sample-app
   tag: latest
   pullPolicy: Always
 
-replicaCount: 0  # Start at zero
+replicaCount: 0
 
 resources:
   requests:
@@ -802,92 +1021,14 @@ autoscaling:
   maxReplicas: 10
   queueLength: 5
   cooldownPeriod: 20
+  pollingInterval: 5
 
-costOptimization:
+rabbitmq:
+  host: rabbitmq.cost-optimized.svc.cluster.local
+  port: 5672
+  queue: work-queue
+  username: guest
+  password: guest
+
+ingress:
   enabled: true
-  maxMonthlyCost: 0.50
-  scaleToZero: true
-
-monitoring:
-  enabled: true
-  prometheus: true
-  grafana: false
-```
-
-### 5.3 Quick Start Script
-```bash
-#!/bin/bash
-# quick-start.sh
-
-set -e
-
-echo "=== Cost-Optimized Autoscaling System ==="
-echo "Quick Start Guide"
-
-# Check prerequisites
-./verify-tools.sh
-
-# Start Minikube if not running
-if ! minikube status &>/dev/null; then
-    echo "Starting Minikube..."
-    ./setup-minikube.sh
-fi
-
-# Start local registry
-docker run -d -p 5000:5000 --name local-registry registry:2 2>/dev/null || docker start local-registry
-
-# Install infrastructure
-echo "Installing RabbitMQ..."
-kubectl apply -f rabbitmq-deployment.yaml
-
-echo "Installing KEDA..."
-kubectl apply -f https://github.com/kedacore/keda/releases/download/v2.10.0/keda-2.10.0.yaml
-
-# Build and deploy
-echo "Building application..."
-./build-push.sh latest
-
-echo "Deploying application..."
-./pipeline.sh
-
-echo "Starting monitoring..."
-./monitoring.sh &
-
-echo -e "\n✅ Quick Start Complete!"
-echo "Access services:"
-echo "  - Application: http://localhost:8080"
-echo "  - RabbitMQ: http://localhost:15672 (guest/guest)"
-echo "  - Kubecost: http://localhost:9090"
-echo "  - KEDA Dashboard: kubectl get scaledobject -A"
-echo -e "\nTo test scaling: ./load-test.sh"
-```
-
----
-
-## Key Improvements Summary
-
-| Area | Improvement |
-|------|-------------|
-| **Performance** | 2-3x faster operations |
-| **Resource Usage** | No VM overhead |
-| **Development** | Direct access to tools |
-| **Debugging** | Simplified troubleshooting |
-| **Port Forwarding** | Single localhost access |
-| **Build Times** | Faster builds with native Docker |
-| **Testing** | Direct load testing from host |
-
-## Cost Savings vs Previous Approach
-
-| Item | Savings |
-|------|---------|
-| VM Resources | 100% (no VM needed) |
-| Development Time | 2-3 days saved |
-| Maintenance | Reduced complexity |
-| Performance | 20-30% better |
-
-## Next Steps
-
-1. Run `./quick-start.sh` to get started
-2. Test scaling: `./load-test.sh`
-3. Monitor costs: `./monitoring.sh`
-4. Validate: `./pipeline.sh` (should pass)
