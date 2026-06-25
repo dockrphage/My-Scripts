@@ -1,12 +1,12 @@
 # Lab 1: GitOps-Driven Auto-Remediation - Complete Implementation Guide
 
-This comprehensive guide walks you through building a complete auto-remediation system where Crossplane provisions infrastructure, ArgoCD enables GitOps, and Chaos Mesh injects failures to validate your remediation logic—all on your laptop with zero cloud costs.
+This comprehensive guide walks us through building a complete auto-remediation system where Crossplane provisions infrastructure, ArgoCD enables GitOps, and Chaos Mesh injects failures to validate our remediation logic—all on local laptop with zero cloud costs.
 
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Your Laptop (Kind Cluster)                   │
+│                    Local Laptop (Kind Cluster)                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐      ┌──────────────┐      ┌───────────────┐ │
 │  │   ArgoCD    │─────▶│  Crossplane  │─────▶│   MiniStack   │ │
@@ -25,7 +25,7 @@ This comprehensive guide walks you through building a complete auto-remediation 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**The workflow:** You commit a manifest defining a PostgreSQL database and application. ArgoCD syncs it, Crossplane provisions the simulated resources, and when Chaos Mesh injects a failure, your remediation logic automatically kicks in .
+**The workflow:** User commit a manifest defining a PostgreSQL database and application. ArgoCD syncs it, Crossplane provisions the simulated resources, and when Chaos Mesh injects a failure, our remediation logic automatically kicks in .
 
 ---
 
@@ -33,7 +33,7 @@ This comprehensive guide walks you through building a complete auto-remediation 
 
 ### 1.1 Prerequisites
 
-Ensure you have these installed:
+Ensure to have these installed:
 - **Docker** (running)
 - **Kind** - `brew install kind` or from [releases](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
 - **kubectl** - `brew install kubectl`
@@ -62,7 +62,7 @@ kubectl cluster-info --context kind-remediation-lab
 
 ### 1.3 Install MiniStack (Local AWS Mock)
 
-MiniStack simulates AWS services locally, preventing cloud billing while validating your Crossplane configurations .
+MiniStack simulates AWS services locally, preventing cloud billing while validating Crossplane configurations .
 
 ```bash
 # Download and run MiniStack
@@ -159,7 +159,7 @@ kubectl apply -f provider-config.yaml
 
 ## Phase 3: Install ArgoCD (10 minutes)
 
-ArgoCD enables GitOps automation—it watches your Git repository and automatically syncs the desired state .
+ArgoCD enables GitOps automation—it watches the Git repository and automatically syncs the desired state .
 
 ### 3.1 Install ArgoCD
 
@@ -392,7 +392,7 @@ func (r *RemediationPolicyReconciler) executeAction(ctx context.Context, action 
         
     case "failover":
         log.Info("Triggering failover for database")
-        // Here you'd trigger a Crossplane action to failover RDS
+        // Here we'd trigger a Crossplane action to failover RDS
         return nil
         
     default:
@@ -608,7 +608,7 @@ kubectl apply -f deployments/app-deployment.yaml
 
 ## Phase 6: Install Chaos Mesh for Failure Injection (10 minutes)
 
-Chaos Mesh injects controlled failures to trigger and test your remediation logic .
+Chaos Mesh injects controlled failures to trigger and test the remediation logic .
 
 ### 6.1 Install Chaos Mesh
 
@@ -756,7 +756,7 @@ status:
 
 ## Phase 9: GitOps Integration with ArgoCD
 
-### 9.1 Configure ArgoCD to Watch Your Repository
+### 9.1 Configure ArgoCD to Watch the Repository
 
 Create `argocd-apps/app-of-apps.yaml`:
 
@@ -783,7 +783,7 @@ spec:
       selfHeal: true
 ```
 
-### 9.2 Structure Your Git Repository
+### 9.2 Structure the Git Repository
 
 ```
 remediation-lab/
