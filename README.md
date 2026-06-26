@@ -32,7 +32,7 @@ All scripts have been tested in my own environment and documented with clarity a
 
 5. Learn Effectively https://github.com/dockrphage/My-Scripts/blob/main/My-Notes/DevOps_Prep-Cheat-Code.md
 
-6. While this repo is recent, some of my earlier lab notes are here https://github.com/dockrphage/engineer.kodekloud
+6. While this repo is recent, some of my earlier lab notes are here https://t.me/DevOpsEngineerHub
 
 ## Repository Structure
 
