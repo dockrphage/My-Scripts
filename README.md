@@ -21,22 +21,25 @@ Some repositories in this tree were inadvertently pushed with full project files
 
 All scripts have been tested in my own environment and documented with clarity and reproducibility in mind.
 
+## Quick pointer to Favourites
+1. For full k8s setup with LB, ingress, try https://github.com/dockrphage/My-Scripts/tree/main/k8s/k8s-v1-36-Vag-auto
+
+2. For EC2 Cost Savings, identify cheepest spot instances using https://github.com/dockrphage/My-Scripts/blob/main/AWS/aws_spot_price.py
+
+3. Zero Bill AWS Emulator - Ministack setup https://github.com/dockrphage/My-Scripts/blob/main/DevOps-Prep/Ministack-setup.md
+
+4. Zero Bill AWS Emulator - Localstack setup https://github.com/dockrphage/My-Scripts/blob/main/AWS/LocalStack/README-2.md
+
+5. Learn Effectively https://github.com/dockrphage/My-Scripts/blob/main/My-Notes/DevOps_Prep-Cheat-Code.md
+
+6. While this repo is recent, some of my earlier lab notes are here https://github.com/dockrphage/engineer.kodekloud
+
 ## Repository Structure
 
-High‑Level Categories
-AWS — EC2 setup, EIP cleanup, LocalStack labs, automation scripts
-
-DevOps‑Prep — Vagrant labs, GitLab CE clusters, load balancers, Keycloak, ArgoCD, Azure P2S, and more
-
-Kubernetes — EC2‑based clusters, Vagrant‑based clusters, probe testing, MetalLB, rolling updates, and HA patterns
-
-Linux — General Linux automation and utilities
-
-My Notes — General Notes
-
-Windows — General Utility notes on windows
-
-Prep‑Lab — This will eventually be merged with DevOps-Prep
+Nothing complicated here - 
+DevOps-Prep - Most of my newer content will be in DevOps-Prep
+k8s - setup script for k8s cluster here; is the base of many of my lab projects
+the rest of the directory may be considered miscellanious and legacy
 
 ## Philosophy & Usage
 
@@ -51,37 +54,10 @@ Debug issues using your own reasoning + AI assistance
 
 Document your own learnings as you go
 
-📄 README‑Driven Development
-Each project aims to be:
-
-Self‑contained
-
-Reconstructable
-
-Clear in purpose
-
-Minimal in dependencies
-
 🧪 Tested but Imperfect
-All scripts work in my environment.
+The scripts work in my environment.
 They may not work in yours without tweaks — and that’s the point.
 
-
-
-
-## Contributing to Your Own Learning
-
-If you use this repo, consider:
-
-Rewriting the steps in your own words
-
-Documenting errors you encounter
-
-Creating your own improved version of each script
-
-Using AI tools to explain concepts, not just fix errors
-
-This transforms the repo from a script dump into a learning accelerator.
 
 
 
