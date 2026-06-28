@@ -93,8 +93,7 @@ A complete, production-grade CI/CD pipeline that demonstrates the **"Build once,
 ### **Prerequisites**
 
 #### **Hardware Requirements**
-- Laptop with **i7 processor** and **32GB RAM** (or similar)
-- Minimum: 8GB RAM, 4 cores
+- Laptop with Minimum: 8GB RAM, 4 cores
 
 #### **Software Requirements**
 ```bash
