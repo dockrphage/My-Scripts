@@ -4,6 +4,8 @@ Click any question below to jump to its answer.
 
 - **[Q1. Does `cat ~/.kube/config | base64` work for extracting a base64 kubeconfig, or do newline characters cause problems?](#q1-base64-kubeconfig-newline-issues)**  
 - **[Q2. How do you enable passwordless SSH login for Ansible across multiple Linux nodes?](#q2-passwordless-ssh-for-ansible)**  
+- **[Q2. How do you enable ssh login for (multiple)vagrant ubuntu vms?]
+(q3-enable-ssh-login-for-vagrant-ubuntu)
 
 ---
 
@@ -100,3 +102,40 @@ If no password prompt appears, passwordless SSH is correctly configured.
 
 ---
 
+#Q3.  **Enable SSH Password Login on Vagrant Ubuntu VMs (Quick Note)**
+### <a name="q3-enable-ssh-login-for-vagrant-ubuntu"></a>  
+
+Vagrant Ubuntu boxes normally authenticate using the **insecure default SSH key** that ships with Vagrant. Sometimes you need **password‑based SSH login**—for example, when testing Ansible inventory, SSH automation, or simulating real‑world server access.
+
+This note shows how to quickly enable password login across multiple Vagrant VMs using a simple shell loop.
+
+---
+
+
+To enable password login, you must:
+
+1. Modify the SSH config  
+2. Set a password  
+3. Restart the SSH daemon  
+
+---
+
+## **Quick method: Patch all VMs using a loop**
+
+```bash
+for i in {1..5}; do
+    vagrant ssh node$i -c "
+        sudo sed -i 's/^PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config &&
+        echo 'vagrant:ss' | sudo chpasswd &&
+        sudo systemctl restart sshd
+    "
+done
+```
+
+### What this does
+- **Enables password authentication** in `/etc/ssh/sshd_config`
+- **Sets the vagrant user password** to `ss`
+- **Restarts the correct SSH service** (`sshd` on Vagrant boxes)
+
+After this, you can log in normally:
+---
