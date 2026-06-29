@@ -5,7 +5,7 @@ Click any question below to jump to its answer.
 - **[Q1. Does `cat ~/.kube/config | base64` work for extracting a base64 kubeconfig, or do newline characters cause problems?](#q1-base64-kubeconfig-newline-issues)**  
 - **[Q2. How do you enable passwordless SSH login for Ansible across multiple Linux nodes?](#q2-passwordless-ssh-for-ansible)**  
 - **[Q2. How do you enable ssh login for (multiple)vagrant ubuntu vms?]
-(q3-enable-ssh-login-for-vagrant-ubuntu)
+(#q3-enable-ssh-login-for-vagrant-ubuntu)**
 
 ---
 
