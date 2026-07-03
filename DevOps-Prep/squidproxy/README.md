@@ -1,5 +1,7 @@
 # Squid Proxy Lab: Enterprise-Grade Network Security
 
+
+
 ## 🎯 Architecture Overview
 
 ```
