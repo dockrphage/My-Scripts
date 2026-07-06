@@ -289,11 +289,6 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for gui
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- Kubernetes community for the amazing platform
-- All contributors and users of this tool
-
 ## 📞 Support
 
 - **Issues**: [GitHub Issues](https://github.com/yourusername/cluster-health-scan/issues)
