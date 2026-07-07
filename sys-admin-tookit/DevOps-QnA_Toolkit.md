@@ -4,7 +4,10 @@ Click any question below to jump to its answer.
 
 - **[Q1. Does `cat ~/.kube/config | base64` work for extracting a base64 kubeconfig, or do newline characters cause problems?](#q1-base64-kubeconfig-newline-issues)**  
 - **[Q2. How do you enable passwordless SSH login for Ansible across multiple Linux nodes?](#q2-passwordless-ssh-for-ansible)**  
-- **[Q2. How do you enable ssh login for (multiple)vagrant ubuntu vms?](#q3-enable-ssh-login-for-vagrant-ubuntu)**
+- **[Q3. How do you enable ssh login for (multiple)vagrant ubuntu vms?](#q3-enable-ssh-login-for-vagrant-ubuntu)**
+
+- **[Q4. How to add a new ssh key to github?](#q4-adding-new-SSH-key-to-GitHub)**
+
 
 ---
 
@@ -137,4 +140,105 @@ done
 - **Restarts the correct SSH service** (`sshd` on Vagrant boxes)
 
 After this, you can log in normally:
+---
+
+#Q3.  **Enable SSH Password Login on Vagrant Ubuntu VMs (Quick Note)**
+### <a name="q4-adding-new-SSH-key-to-GitHub"></a>  
+
+Below is a **clean, reusable quick‑reference note** for **adding a new SSH key to GitHub**, based entirely on the commands you used.  
+It’s formatted so you can paste it into any repo’s `/docs/` folder or keep it as a personal cheat‑sheet.
+
+---
+
+# **🔐 Quick Reference — Add a New SSH Key to GitHub**
+
+## **1. Generate a new SSH key**
+Use **ed25519** (modern, secure, fast):
+
+```bash
+ssh-keygen -t ed25519 -C "dockrphage" -f ~/.ssh/gha-practice-ed25519
+```
+
+- `-C` → label/comment  
+- `-f` → output file path  
+- Creates:
+  - `~/.ssh/gha-practice-ed25519` (private key)
+  - `~/.ssh/gha-practice-ed25519.pub` (public key)
+
+---
+
+## **2. Verify the key files**
+```bash
+ls -altr ~/.ssh
+```
+
+---
+
+## **3. Start the SSH agent**
+```bash
+eval "$(ssh-agent -s)"
+```
+
+---
+
+## **4. Add the private key to the agent**
+```bash
+ssh-add ~/.ssh/gha-practice-ed25519
+```
+
+Check loaded keys:
+
+```bash
+ssh-add -l
+```
+
+---
+
+## **5. View your public key**
+Either command works:
+
+```bash
+cat ~/.ssh/gha-practice-ed25519.pub
+```
+
+or
+
+```bash
+cat gha-practice-ed25519.pub
+```
+
+Copy the entire output (single line starting with `ssh-ed25519`).
+
+---
+
+## **6. Add the key to GitHub**
+Navigate:
+
+**GitHub → Settings → SSH and GPG keys → New SSH key**
+
+Paste the public key → give it a name (e.g., `gha-practice`) → Save.
+
+GitHub will confirm:
+
+> *You have successfully added the key 'gha-practice'.*
+
+---
+
+## **7. Test GitHub SSH connectivity**
+```bash
+ssh -T git@github.com
+```
+
+Expected output:
+
+> *Hi dockrphage! You've successfully authenticated…*
+
+---
+
+## **8. Reuse this pattern for any future key**
+Just change:
+- Key label (`-C`)
+- Output filename (`-f`)
+- GitHub key name
+
 ---
