@@ -6,6 +6,7 @@ Click any question below to jump to its answer.
 - **[Q2. How do you enable passwordless SSH login for Ansible across multiple Linux nodes?](#q2-passwordless-ssh-for-ansible)**  
 - **[Q3. How do you enable ssh login for (multiple)vagrant ubuntu vms?](#q3-enable-ssh-login-for-vagrant-ubuntu)**
 
+- **[Q3. How do you enable ssh login for (multiple)vagrant ubuntu vms?](#q4-adding-new-SSH-key-to-GitHub)**
 - **[Q4. How to add a new ssh key to github?](#q4-adding-new-SSH-key-to-GitHub)**
 
 
@@ -142,7 +143,7 @@ done
 After this, you can log in normally:
 ---
 
-#Q3.  **Enable SSH Password Login on Vagrant Ubuntu VMs (Quick Note)**
+#Q4.  **Enable SSH Password Login on Vagrant Ubuntu VMs (Quick Note)**
 ### <a name="q4-adding-new-SSH-key-to-GitHub"></a>  
 
 Below is a **clean, reusable quick‑reference note** for **adding a new SSH key to GitHub**, based entirely on the commands you used.  
