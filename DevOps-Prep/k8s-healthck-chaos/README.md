@@ -118,15 +118,8 @@ bridged-pool   ["192.168.1.55-192.168.1.65"]
 
 ---
 
-## Quick Start
 
-### One-Line Deployment
-```bash
-# Clone and deploy everything
-git clone https://github.com/dockrphage/k8s-healthcheck-lab.git
-cd k8s-healthcheck-lab
-./deploy-all.sh
-```
+
 
 ### Manual Deployment Steps
 
