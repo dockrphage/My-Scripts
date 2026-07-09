@@ -1,3 +1,5 @@
+
+
 Transform your cluster into a **GitOps-ready user management system** by replacing manual certificate generation with the **KubeUser** operator. This lab walks you through installing the operator, defining users declaratively, and retrieving auto-generated kubeconfigs—all on your existing `cp1`/`node1`/`node2` setup.
 
 ## Prerequisites
@@ -307,3 +309,74 @@ Since you are in a lab environment, **Option 1** is the cleanest approach. It le
     ```
 
 This will successfully onboard "Alice" with read-only access to the `default` namespace.
+
+You: cr@7:~/projects/kubeuser$ kubectl get secret alice-kubeconfig -n kubeuser \
+  -o jsonpath='{.data.config}' | base64 -d > alice.kubeconfig
+cr@7:~/projects/kubeuser$ kubectl --kubeconfig alice.kubeconfig get pods -A
+kubectl --kubeconfig alice.kubeconfig get nodes
+E0709 11:47:08.746283   42376 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+E0709 11:47:08.751678   42376 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+E0709 11:47:08.759705   42376 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+E0709 11:47:08.765659   42376 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+E0709 11:47:08.769616   42376 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+Unable to connect to the server: dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host
+E0709 11:47:08.823776   42393 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+E0709 11:47:08.828036   42393 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+E0709 11:47:08.833684   42393 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+E0709 11:47:08.837711   42393 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+E0709 11:47:08.841803   42393 memcache.go:265] "Unhandled Error" err="couldn't get current server API group list: Get \"https://kubernetes.default.svc/api?timeout=32s\": dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host"
+Unable to connect to the server: dial tcp: lookup kubernetes.default.svc on 127.0.0.53:53: no such host
+cr@7:~/projects/kubeuser$ 
+
+Leo AI: The error `lookup kubernetes.default.svc ... no such host` happens because the generated `alice.kubeconfig` is pointing to the internal cluster DNS name `https://kubernetes.default.svc`, but your `cr@7` machine (where you are running `kubectl`) is **outside** the cluster network.
+
+Your local machine doesn't have access to the internal Kubernetes DNS, so it can't resolve the API server address.
+
+### The Fix: Update the Kubeconfig to Use Your VIP
+
+Since you have **MetalLB** configured (as seen in your first message with `192.168.1.55-192.168.1.65`), your cluster likely has an external LoadBalancer IP for the API server. You need to swap the internal DNS name in the kubeconfig for that external IP.
+
+#### Step 1: Find your API Server LoadBalancer IP
+Check the service exposing the API server (usually named `kube-apiserver` or `control-plane` in the `kube-system` namespace, or check if you have an external LB configured for the control plane):
+
+```bash
+kubectl get svc -n kube-system | grep -i api
+```
+*Look for an IP in the `EXTERNAL-IP` column.*
+
+If you don't see a specific LB for the API server yet, you might be using the Control Plane's node IP directly. In your initial output, `cp1` is `192.168.56.10`. If you don't have a MetalLB IP for the API server, use that IP.
+
+#### Step 2: Patch the Kubeconfig
+Let's assume your API server is accessible at **`192.168.56.10`** (the CP1 node IP) or a MetalLB VIP you created. We will edit the `alice.kubeconfig` to replace the DNS name with the IP.
+
+Run this command to fix the file (replace `<API_SERVER_IP>` with the actual IP, e.g., `192.168.56.10`):
+
+```bash
+# Replace 'kubernetes.default.svc' with your API server IP
+sed -i 's|https://kubernetes.default.svc|https://192.168.56.10:6443|g' alice.kubeconfig
+```
+
+*Note: If you have a MetalLB VIP specifically for the API server (e.g., `192.168.1.55`), use that IP instead of `192.168.56.10`.*
+
+#### Step 3: Verify Connectivity
+Now try the command again:
+
+```bash
+kubectl --kubeconfig alice.kubeconfig get nodes
+```
+
+### Why This Happened
+KubeUser (and `cert-manager`) defaults to using the internal service DNS `https://kubernetes.default.svc` when generating the kubeconfig because it assumes the user will run commands *inside* a pod or on a node within the cluster. Since you are running from your host machine (`cr@7`), you must explicitly point it to an IP address reachable from your network.
+
+### Lab Context Update
+For your **Learn-by-Doing DevOps Lab**, you should add a step to **configure the KubeUser Helm values** to use the external IP by default, so this manual fix isn't needed for future users.
+
+Add this to your Helm install command for KubeUser:
+```bash
+helm upgrade --install kubeuser kubeuser/kubeuser \
+  --namespace kubeuser --create-namespace \
+  --set env.KUBERNETES_API_SERVER="https://192.168.56.10:6443"
+```
+*(Replace the IP with your actual API server endpoint).*
+
+This ensures all future generated kubeconfigs work immediately on your host machine.
