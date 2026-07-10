@@ -247,3 +247,201 @@ Just change:
 
 #Q5.  **How do I backup my Kubernetes cluster and restore it to the original state after finishing a lab?**
 ### <a name="q5-velero-minio-configure-backup-restore"></a>  
+
+Objective is to snapshot entire Kubernetes cluster before running a lab and restore it back to the exact original state afterward.  
+It uses **Velero** + **MinIO**; miniIO is running on a dedicated VM (node2) over a **private network** (10.0.0.x); this extra network was needed because VirtualBox host‑only and bridged networks block MinIO traffic even after promiscuous mode is enabled.  
+
+```ruby
+nodes = {
+  "cp1"   => { ip: "192.168.56.10", bridged_ip: "192.168.1.50", pvt_ip: "10.10.10.10", cpu: 2, mem: 2048 },
+  "node1" => { ip: "192.168.56.11", bridged_ip: "192.168.1.51", pvt_ip: "10.10.10.11", cpu: 2, mem: 6144 },
+  "node2" => { ip: "192.168.56.12", bridged_ip: "192.168.1.52", pvt_ip: "10.10.10.12", cpu: 2, mem: 6144 }
+}
+```
+
+The **private network (10.10.10.x)** is what allows Velero (inside Kubernetes) to reach MinIO (running in Docker on node2).
+
+---
+
+# **A. MinIO Setup (node2 VM)**
+
+Run MinIO on node2 using the private IP:
+
+```bash
+docker run -d \
+  --name minio-server \
+  --restart unless-stopped \
+  -p 10.10.10.12:9000:9000 \
+  -p 10.10.10.12:9001:9001 \
+  -v /data/minio:/data \
+  -e "MINIO_ROOT_USER=minioadmin" \
+  -e "MINIO_ROOT_PASSWORD=minioadmin123" \
+  minio/minio server /data --console-address ":9001"
+```
+
+Verify MinIO:
+
+```bash
+docker ps
+curl http://10.10.10.12:9000/minio/health/ready
+```
+
+Create the Velero bucket:
+
+```bash
+docker exec minio-server mc alias set local http://10.10.10.12:9000 minioadmin minioadmin123
+docker exec minio-server mc mb local/velero-bucket
+```
+
+Create MinIO credentials file:
+
+```bash
+cat > /home/vagrant/minio-credentials <<EOF
+[default]
+aws_access_key_id = minioadmin
+aws_secret_access_key = minioadmin123
+EOF
+
+chmod 600 /home/vagrant/minio-credentials
+```
+
+---
+
+# **B. Velero Setup (inside Kubernetes cluster)**
+
+Create Velero namespace:
+
+```bash
+kubectl create namespace velero
+```
+
+Create cloud credentials secret:
+
+```bash
+cat > credentials-velero <<EOF
+[default]
+aws_access_key_id = minioadmin
+aws_secret_access_key = minioadmin123
+EOF
+
+kubectl create secret generic cloud-credentials \
+  --namespace velero \
+  --from-file=cloud=credentials-velero
+```
+
+Install Velero CLI inside cp1:
+
+```bash
+wget https://github.com/vmware-tanzu/velero/releases/download/v1.12.0/velero-v1.12.0-linux-amd64.tar.gz
+tar -xvf velero-v1.12.0-linux-amd64.tar.gz
+sudo mv velero-v1.12.0-linux-amd64/velero /usr/local/bin/
+```
+
+Install Velero server into the cluster:
+
+```bash
+velero install \
+  --provider aws \
+  --plugins velero/velero-plugin-for-aws:v1.8.0 \
+  --bucket velero-bucket \
+  --secret-file ./credentials-velero \
+  --backup-location-config region=minio,s3ForcePathStyle="true",s3Url=http://10.10.10.12:9000 \
+  --use-volume-snapshots=false \
+  --wait
+```
+
+Verify:
+
+```bash
+kubectl get pods -n velero
+velero backup-location get
+```
+
+---
+
+# **C. Take a Pre‑Lab Snapshot (Backup)**
+
+Before starting any lab:
+
+```bash
+velero backup create prelab-$(date +%F-%H%M) \
+  --include-cluster-resources=true \
+  --wait
+```
+
+Check backup:
+
+```bash
+velero backup get
+velero backup describe <backup-name>
+velero backup logs <backup-name>
+```
+
+---
+
+# **D. Restore Cluster After Lab**
+
+After finishing lab/ experiment:
+
+```bash
+velero restore create --from-backup <backup-name> --wait
+```
+
+Validate:
+
+```bash
+kubectl get all -A
+kubectl get crd
+kubectl get ns
+```
+
+Cluster is now **exactly** back to the pre‑lab state.
+
+---
+
+# **E. Using Velero from the Host Laptop**
+
+Install Velero CLI on host laptop:
+
+```bash
+VELERO_VERSION=v1.15.2
+wget https://github.com/vmware-tanzu/velero/releases/download/${VELERO_VERSION}/velero-${VELERO_VERSION}-linux-amd64.tar.gz
+tar -xvf velero-${VELERO_VERSION}-linux-amd64.tar.gz
+sudo mv velero-${VELERO_VERSION}-linux-amd64/velero /usr/local/bin/
+velero version --client-only
+```
+
+Enable autocompletion:
+
+```bash
+source <(velero completion bash)
+```
+
+Run restore from host:
+
+```bash
+velero backup get
+velero restore create --from-backup <backup-name> --wait
+```
+
+This works because host can reach the control plane at:
+
+```
+https://192.168.56.10:6443
+```
+
+and uses the same kubeconfig as the cp1 VM.
+
+---
+
+# **F. Summary**
+
+- MinIO runs on **node2** using the **private network (10.10.10.x)**  
+- Velero runs inside Kubernetes and backs up to MinIO  
+- Take a **pre‑lab snapshot**  
+- After finishing the lab, **restore**  
+- Velero commands from **cp1** or **from host laptop**  
+- No cleanup scripts needed — backup/restore is deterministic and safe  
+
+---
+
