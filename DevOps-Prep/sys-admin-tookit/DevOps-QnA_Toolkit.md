@@ -6,7 +6,7 @@ Click any question below to jump to its answer.
 - **[Q2. How do you enable passwordless SSH login for Ansible across multiple Linux nodes?](#q2-passwordless-ssh-for-ansible)**  
 - **[Q3. How do you enable ssh login for (multiple)vagrant ubuntu vms?](#q3-enable-ssh-login-for-vagrant-ubuntu)**
 - **[Q4. Add a new SSH key to GitHub](#q4-add-new-ssh-key-to-github)**
-- **[Q5. Add a new SSH key to GitHub](#q5-velero-minio-configure-backup-restore)**
+- **[Q5. How do I backup my Kubernetes cluster and restore it to the original state after finishing a lab?](#q5-velero-minio-configure-backup-restore)**
 
 
 ---
@@ -245,5 +245,5 @@ Just change:
 
 
 
-#Q5.  **Enable SSH Password Login on Vagrant Ubuntu VMs (Quick Note)**
+#Q5.  **How do I backup my Kubernetes cluster and restore it to the original state after finishing a lab?**
 ### <a name="q5-velero-minio-configure-backup-restore"></a>  
