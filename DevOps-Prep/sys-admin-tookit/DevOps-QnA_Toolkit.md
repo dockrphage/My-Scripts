@@ -245,4 +245,5 @@ Just change:
 
 
 
-- **[Q5. Add a new SSH key to GitHub](#q5-add-new-ssh-key-to-github)**
+#Q5.  **Enable SSH Password Login on Vagrant Ubuntu VMs (Quick Note)**
+### <a name="q5-add-new-ssh-key-to-github"></a>  
