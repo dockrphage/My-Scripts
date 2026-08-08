@@ -531,7 +531,7 @@ This lab gives you hands-on experience with every aspect of Kubernetes probes wh
 
 
 
-# Kubernetes Probes Lab - Learning by Implementing (Same lab as above)
+# Kubernetes Probes Lab - Learning by Implementing (Duplicate)
 This is the same lab as above in heredoc format for easy copy paste.
 Useful if you plan to do this multiple iterations.
 
