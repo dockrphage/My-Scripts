@@ -1,13 +1,4 @@
-
-
-
-Perfect, Ville — here is **Lesson 1 of your learn‑by‑implementation SC104 series**, built exactly for your homelab style: hands‑on, zero theory, pure doing.
-
-This is **the first real Helm chart you will build**, from scratch, using Kind or any Kubernetes cluster in your Vagrant fleet.
-
-Every step is actionable, terminal‑ready, and includes Guided Links so you can branch deeper anytime.
-
-(AI Lesson generated in copilot)
+(AI generated)
 ---
 
 # ⭐ Lesson 1 — Build Your First Helm Chart (Hands‑On Only)
